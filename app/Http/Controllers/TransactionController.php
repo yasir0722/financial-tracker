@@ -94,7 +94,7 @@ class TransactionController extends Controller
             'icon' => 'fas fa-history'
         ];
 
-        // This Year
+        // This Year (Current year)
         $thisYearStart = $currentDate->copy()->startOfYear()->format('Y-m-d');
         $thisYearEnd = $currentDate->copy()->endOfYear()->format('Y-m-d');
         $isThisYearActive = ($request->get('date_from') == $thisYearStart && $request->get('date_to') == $thisYearEnd);
@@ -105,6 +105,21 @@ class TransactionController extends Controller
             'end_date' => $thisYearEnd,
             'is_active' => $isThisYearActive,
             'button_class' => $isThisYearActive ? 'btn-warning' : 'btn-outline-warning',
+            'icon' => 'fas fa-calendar-year'
+        ];
+
+        // Last Year (Previous calendar year)
+        $lastYear = $currentDate->copy()->subYear();
+        $lastYearStart = $lastYear->copy()->startOfYear()->format('Y-m-d');
+        $lastYearEnd = $lastYear->copy()->endOfYear()->format('Y-m-d');
+        $isLastYearActive = ($request->get('date_from') == $lastYearStart && $request->get('date_to') == $lastYearEnd);
+
+        $quickDates[] = [
+            'label' => $lastYear->format('Y'),
+            'start_date' => $lastYearStart,
+            'end_date' => $lastYearEnd,
+            'is_active' => $isLastYearActive,
+            'button_class' => $isLastYearActive ? 'btn-secondary' : 'btn-outline-secondary',
             'icon' => 'fas fa-calendar-year'
         ];
 
