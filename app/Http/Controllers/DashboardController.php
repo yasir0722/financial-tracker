@@ -32,15 +32,35 @@ class DashboardController extends Controller
             ->groupBy('banks.id', 'banks.name')
             ->get();
 
-        // Get monthly summary for chart
+        // Get monthly summary for chart (last 12 months)
         $monthlySummary = Transaction::selectRaw('
                 DATE_FORMAT(transaction_date, "%Y-%m") as month,
+                DATE_FORMAT(transaction_date, "%M %Y") as month_name,
                 COALESCE(SUM(credit), 0) as income,
                 COALESCE(SUM(debit), 0) as expense
             ')
-            ->groupBy('month')
-            ->orderBy('month', 'desc')
-            ->take(12)
+            ->where('transaction_date', '>=', now()->subMonths(11)->startOfMonth())
+            ->groupBy('month', 'month_name')
+            ->orderBy('month', 'asc')
+            ->get();
+
+        // Get spending by category/description patterns for current month
+        $currentMonthSpending = Transaction::selectRaw('
+                CASE 
+                    WHEN LOWER(transaction_detail) LIKE "%grocery%" OR LOWER(transaction_detail) LIKE "%foodpanda%" OR LOWER(transaction_detail) LIKE "%grab%" THEN "Food & Groceries"
+                    WHEN LOWER(transaction_detail) LIKE "%petrol%" OR LOWER(transaction_detail) LIKE "%fuel%" THEN "Transportation"
+                    WHEN LOWER(transaction_detail) LIKE "%utility%" OR LOWER(transaction_detail) LIKE "%electricity%" OR LOWER(transaction_detail) LIKE "%water%" THEN "Utilities"
+                    WHEN LOWER(transaction_detail) LIKE "%shopping%" OR LOWER(transaction_detail) LIKE "%lazada%" OR LOWER(transaction_detail) LIKE "%shopee%" THEN "Shopping"
+                    WHEN LOWER(transaction_detail) LIKE "%transfer%" OR LOWER(transaction_detail) LIKE "%payment%" THEN "Transfers"
+                    ELSE "Others"
+                END as category,
+                COALESCE(SUM(debit), 0) as total_spent
+            ')
+            ->whereMonth('transaction_date', now()->month)
+            ->whereYear('transaction_date', now()->year)
+            ->where('debit', '>', 0)
+            ->groupBy('category')
+            ->orderBy('total_spent', 'desc')
             ->get();
 
         return view('dashboard', compact(
@@ -50,7 +70,8 @@ class DashboardController extends Controller
             'transactionCount',
             'recentTransactions',
             'bankBalances',
-            'monthlySummary'
+            'monthlySummary',
+            'currentMonthSpending'
         ));
     }
 }
