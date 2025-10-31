@@ -115,7 +115,7 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header py-3">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">
                         Transaction List ({{ $transactions->total() }} total)
                     </h6>
@@ -141,7 +141,7 @@
                                     <td>{{ $transaction->posted_date->format('M d, Y') }}</td>
                                     <td>{{ $transaction->transaction_date->format('M d, Y') }}</td>
                                     <td>
-                                        <span class="badge badge-info">{{ $transaction->bank->name }}</span>
+                                        <span class="badge badge-primary bank-badge">{{ $transaction->bank->name }}</span>
                                     </td>
                                     <td>{{ $transaction->transaction_detail }}</td>
                                     <td class="text-right text-danger">
@@ -196,14 +196,26 @@
                         </table>
                     </div>
 
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div class="text-muted">
-                            Showing {{ $transactions->firstItem() ?? 0 }} to {{ $transactions->lastItem() ?? 0 }} 
-                            of {{ $transactions->total() }} results
+                    <!-- Bottom Pagination -->
+                    @if($transactions->hasPages())
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <div class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Showing {{ $transactions->firstItem() ?? 0 }} to {{ $transactions->lastItem() ?? 0 }} 
+                                of {{ $transactions->total() }} results (Page {{ $transactions->currentPage() }} of {{ $transactions->lastPage() }})
+                            </div>
+                            <div class="d-flex align-items-center">
+                                {{ $transactions->appends(request()->query())->links('pagination::bootstrap-4') }}
+                            </div>
                         </div>
-                        {{ $transactions->appends(request()->query())->links() }}
-                    </div>
+                    @else
+                        <div class="text-center mt-3 pt-3 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-list"></i>
+                                {{ $transactions->total() }} total transactions
+                            </small>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -222,7 +234,7 @@ function selectDateRange(startDate, endDate) {
     document.querySelector('form[method="GET"]').submit();
 }
 
-// Add some CSS for better button spacing
+// Add some CSS for better button spacing and pagination styling
 document.addEventListener('DOMContentLoaded', function() {
     // Add custom styling
     const style = document.createElement('style');
@@ -234,6 +246,114 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         .gap-2 > * {
             margin-right: 0.25rem;
+        }
+        
+        /* Bank badge styling */
+        .bank-badge {
+            background-color: #007bff !important;
+            color: #ffffff !important;
+            font-weight: 500 !important;
+            font-size: 0.75rem !important;
+            padding: 0.25rem 0.5rem !important;
+            border-radius: 0.25rem !important;
+            text-shadow: none !important;
+        }
+        
+        .bank-badge:hover {
+            background-color: #0056b3 !important;
+            color: #ffffff !important;
+        }
+        
+        /* Top pagination styling (in card header) */
+        .top-pagination .pagination {
+            margin-bottom: 0 !important;
+            margin-top: 0 !important;
+        }
+        
+        .top-pagination .pagination .page-item .page-link {
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.75rem !important;
+            border: 1px solid #dee2e6 !important;
+            color: #6c757d !important;
+            background-color: #fff !important;
+            text-decoration: none !important;
+            line-height: 1.2 !important;
+        }
+        
+        .top-pagination .pagination .page-item.active .page-link {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: #fff !important;
+        }
+        
+        .top-pagination .pagination .page-item .page-link:hover {
+            color: #0056b3 !important;
+            background-color: #e9ecef !important;
+            border-color: #adb5bd !important;
+            text-decoration: none !important;
+        }
+        
+        .top-pagination .pagination .page-item.disabled .page-link {
+            color: #6c757d !important;
+            background-color: #fff !important;
+            border-color: #dee2e6 !important;
+            cursor: not-allowed !important;
+        }
+        
+        .top-pagination .pagination .page-item:first-child .page-link {
+            border-top-left-radius: 0.25rem !important;
+            border-bottom-left-radius: 0.25rem !important;
+        }
+        
+        .top-pagination .pagination .page-item:last-child .page-link {
+            border-top-right-radius: 0.25rem !important;
+            border-bottom-right-radius: 0.25rem !important;
+        }
+        
+        /* Bottom pagination styling */
+        .pagination {
+            margin-bottom: 0;
+        }
+        
+        .pagination .page-item .page-link {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            background-color: #fff;
+            text-decoration: none;
+            position: relative;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: #fff;
+            z-index: 3;
+        }
+        
+        .pagination .page-item .page-link:hover {
+            color: #0056b3;
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+            text-decoration: none;
+        }
+        
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            background-color: #fff;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+        }
+        
+        .pagination .page-item:first-child .page-link {
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        .pagination .page-item:last-child .page-link {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
         }
     `;
     document.head.appendChild(style);

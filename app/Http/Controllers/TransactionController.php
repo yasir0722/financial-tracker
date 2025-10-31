@@ -38,7 +38,7 @@ class TransactionController extends Controller
         }
 
         $transactions = $query->orderBy('transaction_date', 'desc')
-                            ->paginate(20);
+                            ->paginate(50);
 
         $banks = Bank::all();
 
@@ -56,27 +56,11 @@ class TransactionController extends Controller
         $currentDate = Carbon::now();
         $quickDates = [];
 
-        // Monthly buttons (last 6 months)
-        for ($i = 0; $i < 6; $i++) {
-            $monthDate = $currentDate->copy()->subMonths($i);
-            $monthStart = $monthDate->copy()->startOfMonth()->format('Y-m-d');
-            $monthEnd = $monthDate->copy()->endOfMonth()->format('Y-m-d');
-            $monthName = $monthDate->format('M Y');
-            $isActive = ($request->get('date_from') == $monthStart && $request->get('date_to') == $monthEnd);
-
-            $quickDates[] = [
-                'label' => $monthName,
-                'start_date' => $monthStart,
-                'end_date' => $monthEnd,
-                'is_active' => $isActive,
-                'button_class' => $isActive ? 'btn-primary' : 'btn-outline-primary',
-                'icon' => 'fas fa-calendar'
-            ];
-        }
+        // Quick period buttons first
+        $todayEnd = $currentDate->format('Y-m-d');
 
         // Last 30 Days
         $last30Start = $currentDate->copy()->subDays(30)->format('Y-m-d');
-        $todayEnd = $currentDate->format('Y-m-d');
         $isLast30Active = ($request->get('date_from') == $last30Start && $request->get('date_to') == $todayEnd);
 
         $quickDates[] = [
@@ -114,6 +98,33 @@ class TransactionController extends Controller
             'button_class' => $isThisYearActive ? 'btn-warning' : 'btn-outline-warning',
             'icon' => 'fas fa-calendar-year'
         ];
+
+        // Monthly buttons (last 6 months) - only show unique months
+        $addedMonths = [];
+        for ($i = 0; $i < 6; $i++) {
+            $monthDate = $currentDate->copy()->subMonths($i);
+            $monthKey = $monthDate->format('Y-m'); // Use year-month as unique key
+            
+            // Skip if this month was already added
+            if (in_array($monthKey, $addedMonths)) {
+                continue;
+            }
+            
+            $addedMonths[] = $monthKey;
+            $monthStart = $monthDate->copy()->startOfMonth()->format('Y-m-d');
+            $monthEnd = $monthDate->copy()->endOfMonth()->format('Y-m-d');
+            $monthName = $monthDate->format('M Y');
+            $isActive = ($request->get('date_from') == $monthStart && $request->get('date_to') == $monthEnd);
+
+            $quickDates[] = [
+                'label' => $monthName,
+                'start_date' => $monthStart,
+                'end_date' => $monthEnd,
+                'is_active' => $isActive,
+                'button_class' => $isActive ? 'btn-primary' : 'btn-outline-primary',
+                'icon' => 'fas fa-calendar'
+            ];
+        }
 
         return $quickDates;
     }
