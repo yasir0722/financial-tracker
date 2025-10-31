@@ -36,8 +36,12 @@ class SpendingTypeController extends Controller
             'badge_class' => 'required|string|max:50',
             'icon' => 'nullable|string|max:50',
             'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0'
+            'sort_order' => 'integer|min:0',
+            'recategorize' => 'boolean' // Option to re-categorize transactions
         ]);
+
+        // Store old keywords to check if they changed
+        $oldKeywords = $spendingType->keywords ?? [];
 
         // Convert keywords string to array
         if (!empty($validated['keywords'])) {
@@ -47,10 +51,94 @@ class SpendingTypeController extends Controller
             $validated['keywords'] = [];
         }
 
+        $keywordsChanged = $oldKeywords != $validated['keywords'];
+
+        // Update spending type
         $spendingType->update($validated);
+
+        // Re-categorize transactions if requested and keywords changed
+        if ($request->input('recategorize', false) && $keywordsChanged) {
+            $updatedCount = $this->recategorizeTransactionsForType($spendingType->id);
+            return redirect()->route('spending-types.index')
+                ->with('success', "Spending type updated successfully! Re-categorized {$updatedCount} transactions.");
+        }
 
         return redirect()->route('spending-types.index')
             ->with('success', 'Spending type updated successfully!');
+    }
+
+    /**
+     * Re-categorize transactions for a specific spending type
+     */
+    private function recategorizeTransactionsForType($spendingTypeId)
+    {
+        $spendingType = RefSpendingType::findOrFail($spendingTypeId);
+        $othersType = RefSpendingType::findByCode('others');
+        
+        // Get transactions that currently have this spending type or 'Others'
+        $transactions = \App\Models\Transaction::whereIn('spending_type_id', [
+            $spendingTypeId, 
+            $othersType?->id
+        ])->get();
+
+        $updatedCount = 0;
+
+        foreach ($transactions as $transaction) {
+            $detail = strtolower($transaction->transaction_detail);
+            
+            // Check if any of the new keywords match this transaction
+            if (!empty($spendingType->keywords)) {
+                $keywords = array_map('preg_quote', $spendingType->keywords);
+                $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
+                
+                if (preg_match($pattern, $detail)) {
+                    // Update to this spending type
+                    if ($transaction->spending_type_id != $spendingTypeId) {
+                        $transaction->update(['spending_type_id' => $spendingTypeId]);
+                        $updatedCount++;
+                    }
+                } else if ($transaction->spending_type_id == $spendingTypeId) {
+                    // This transaction no longer matches, re-detect its category
+                    $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);
+                    if ($newSpendingTypeId != $spendingTypeId) {
+                        $transaction->update(['spending_type_id' => $newSpendingTypeId]);
+                        $updatedCount++;
+                    }
+                }
+            }
+        }
+
+        return $updatedCount;
+    }
+
+    /**
+     * Auto-detect spending type ID based on transaction description
+     */
+    private function detectSpendingTypeId($transactionDetail): ?int
+    {
+        $detail = strtolower($transactionDetail);
+        
+        // Get all active spending types with keywords
+        $spendingTypes = RefSpendingType::active()->get();
+        
+        // Try to match keywords for each spending type
+        foreach ($spendingTypes as $spendingType) {
+            if (empty($spendingType->keywords)) {
+                continue;
+            }
+            
+            // Build regex pattern from keywords
+            $keywords = array_map('preg_quote', $spendingType->keywords);
+            $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
+            
+            if (preg_match($pattern, $detail)) {
+                return $spendingType->id;
+            }
+        }
+        
+        // Default to 'others' if no match found
+        $othersType = RefSpendingType::findByCode('others');
+        return $othersType?->id;
     }
 
     /**

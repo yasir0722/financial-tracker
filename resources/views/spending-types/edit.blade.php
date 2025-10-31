@@ -200,6 +200,30 @@
 
                         <hr>
 
+                        <div class="alert alert-warning">
+                            <div class="custom-control custom-checkbox">
+                                <input type="hidden" name="recategorize" value="0">
+                                <input type="checkbox" 
+                                       class="custom-control-input" 
+                                       id="recategorize" 
+                                       name="recategorize" 
+                                       value="1"
+                                       {{ old('recategorize', true) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="recategorize">
+                                    <strong><i class="fas fa-sync-alt"></i> Re-categorize existing transactions</strong>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted mt-2">
+                                <i class="fas fa-info-circle"></i> 
+                                When checked, the system will automatically re-categorize existing transactions 
+                                that match the new keywords or were previously categorized as this type. 
+                                This is useful when you add new keywords (like "PSS" for Petronas) and want 
+                                existing transactions to be updated automatically.
+                            </small>
+                        </div>
+
+                        <hr>
+
                         <div class="form-group text-center">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-save"></i> Update Spending Type

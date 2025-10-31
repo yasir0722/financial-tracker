@@ -632,4 +632,51 @@ class TransactionController extends Controller
             'keywords' => $updatedKeywords
         ]);
     }
+
+    /**
+     * Re-categorize all transactions based on current keywords
+     */
+    public function recategorizeTransactions(Request $request)
+    {
+        $validated = $request->validate([
+            'spending_type_id' => 'nullable|exists:ref_spending_types,id'
+        ]);
+
+        // Get transactions to re-categorize
+        $query = Transaction::query();
+        
+        // If specific spending type provided, only re-categorize those transactions
+        // or transactions that might match the new keywords
+        if (isset($validated['spending_type_id'])) {
+            // Get the spending type to see its keywords
+            $spendingType = \App\Models\RefSpendingType::findOrFail($validated['spending_type_id']);
+            
+            // Re-categorize transactions that:
+            // 1. Currently have this spending type, OR
+            // 2. Have 'Others' as spending type (might match new keywords)
+            $othersType = \App\Models\RefSpendingType::findByCode('others');
+            $query->whereIn('spending_type_id', [$validated['spending_type_id'], $othersType?->id]);
+        }
+
+        $transactions = $query->get();
+        $updatedCount = 0;
+
+        foreach ($transactions as $transaction) {
+            $oldSpendingTypeId = $transaction->spending_type_id;
+            $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);
+            
+            // Only update if the spending type changed
+            if ($oldSpendingTypeId != $newSpendingTypeId) {
+                $transaction->update(['spending_type_id' => $newSpendingTypeId]);
+                $updatedCount++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Re-categorized {$updatedCount} transactions successfully",
+            'updated_count' => $updatedCount,
+            'total_checked' => $transactions->count()
+        ]);
+    }
 }
