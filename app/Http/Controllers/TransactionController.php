@@ -187,8 +187,12 @@ class TransactionController extends Controller
             $header = array_shift($csvData); // Remove header row
 
             $importedCount = 0;
+            $updatedCount = 0;
             $errors = [];
 
+            // Get bank information to determine format
+            $bank = Bank::find($request->bank_id);
+            
             foreach ($csvData as $index => $row) {
                 if (count($row) < 4) {
                     $errors[] = "Row " . ($index + 2) . ": Insufficient data";
@@ -196,28 +200,31 @@ class TransactionController extends Controller
                 }
 
                 try {
-                    // Assuming CSV format: posted_date, transaction_date, transaction_detail, debit, credit
-                    $postedDate = Carbon::parse($row[0])->format('Y-m-d');
-                    $transactionDate = Carbon::parse($row[1])->format('Y-m-d');
-                    $transactionDetail = $row[2];
-                    $debit = !empty($row[3]) ? floatval($row[3]) : 0;
-                    $credit = !empty($row[4]) ? floatval($row[4]) : 0;
-
-                    if ($debit == 0 && $credit == 0) {
-                        $errors[] = "Row " . ($index + 2) . ": No debit or credit amount";
+                    $parsedData = $this->parseCsvRowByBank($row, $bank, $index + 2);
+                    
+                    if ($parsedData['error']) {
+                        $errors[] = $parsedData['error'];
                         continue;
                     }
 
-                    Transaction::create([
-                        'posted_date' => $postedDate,
-                        'transaction_date' => $transactionDate,
-                        'transaction_detail' => $transactionDetail,
-                        'debit' => $debit,
-                        'credit' => $credit,
+                    // Use updateOrCreate to prevent duplicates
+                    $transaction = Transaction::updateOrCreate([
+                        // Unique identifier fields
+                        'posted_date' => $parsedData['posted_date'],
+                        'transaction_date' => $parsedData['transaction_date'],
+                        'transaction_detail' => $parsedData['transaction_detail'],
                         'bank_id' => $request->bank_id
+                    ], [
+                        // Fields to update if record exists
+                        'debit' => $parsedData['debit'],
+                        'credit' => $parsedData['credit']
                     ]);
 
-                    $importedCount++;
+                    if ($transaction->wasRecentlyCreated) {
+                        $importedCount++;
+                    } else {
+                        $updatedCount++;
+                    }
                 } catch (\Exception $e) {
                     $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
                 }
@@ -226,7 +233,19 @@ class TransactionController extends Controller
             // Clean up temp file
             Storage::delete($path);
 
-            $message = "Imported {$importedCount} transactions successfully.";
+            // Build success message
+            $messageParts = [];
+            if ($importedCount > 0) {
+                $messageParts[] = "Created {$importedCount} new transactions";
+            }
+            if ($updatedCount > 0) {
+                $messageParts[] = "Updated {$updatedCount} existing transactions";
+            }
+            
+            $message = !empty($messageParts) 
+                ? implode(' and ', $messageParts) . " successfully."
+                : "No transactions were processed.";
+                
             if (!empty($errors)) {
                 $message .= " " . count($errors) . " rows had errors.";
             }
@@ -239,5 +258,156 @@ class TransactionController extends Controller
             return redirect()->back()
                            ->withErrors(['csv_file' => 'Error processing file: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Parse CSV row based on bank format
+     */
+    private function parseCsvRowByBank($row, $bank, $rowNumber)
+    {
+        $result = [
+            'posted_date' => null,
+            'transaction_date' => null,
+            'transaction_detail' => null,
+            'debit' => 0,
+            'credit' => 0,
+            'error' => null
+        ];
+
+        try {
+            switch (strtolower($bank->name)) {
+                case 'cimb bank':
+                    return $this->parseCimbFormat($row, $rowNumber);
+                    
+                case 'maybank':
+                    return $this->parseMaybankFormat($row, $rowNumber);
+                    
+                case 'public bank':
+                    return $this->parsePublicBankFormat($row, $rowNumber);
+                    
+                case 'bank islam':
+                    return $this->parseBankIslamFormat($row, $rowNumber);
+                    
+                case 'bank rakyat':
+                    return $this->parseBankRakyatFormat($row, $rowNumber);
+                    
+                default:
+                    // Generic format: posted_date, transaction_date, transaction_detail, debit, credit
+                    return $this->parseGenericFormat($row, $rowNumber);
+            }
+        } catch (\Exception $e) {
+            $result['error'] = "Row {$rowNumber}: " . $e->getMessage();
+            return $result;
+        }
+    }
+
+    /**
+     * Parse CIMB Bank CSV format
+     * Format: Posting Date, Transaction Date, Transaction Details, Debit(RM), Credit(RM)
+     */
+    private function parseCimbFormat($row, $rowNumber)
+    {
+        $result = [
+            'posted_date' => null,
+            'transaction_date' => null,
+            'transaction_detail' => null,
+            'debit' => 0,
+            'credit' => 0,
+            'error' => null
+        ];
+
+        try {
+            // Parse dates (CIMB format: dd-MMM-yyyy)
+            $result['posted_date'] = Carbon::createFromFormat('d-M-Y', trim($row[0], '"'))->format('Y-m-d');
+            $result['transaction_date'] = Carbon::createFromFormat('d-M-Y', trim($row[1], '"'))->format('Y-m-d');
+            
+            // Clean transaction details
+            $result['transaction_detail'] = trim($row[2], '"');
+            
+            // Parse amounts (remove quotes and convert)
+            $debitStr = trim($row[3], '"');
+            $creditStr = trim($row[4], '"');
+            
+            $result['debit'] = !empty($debitStr) ? floatval(str_replace(',', '', $debitStr)) : 0;
+            $result['credit'] = !empty($creditStr) ? floatval(str_replace(',', '', $creditStr)) : 0;
+
+            if ($result['debit'] == 0 && $result['credit'] == 0) {
+                $result['error'] = "Row {$rowNumber}: No debit or credit amount";
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            $result['error'] = "Row {$rowNumber}: Error parsing CIMB format - " . $e->getMessage();
+            return $result;
+        }
+    }
+
+    /**
+     * Parse Generic CSV format
+     * Format: posted_date, transaction_date, transaction_detail, debit, credit
+     */
+    private function parseGenericFormat($row, $rowNumber)
+    {
+        $result = [
+            'posted_date' => null,
+            'transaction_date' => null,
+            'transaction_detail' => null,
+            'debit' => 0,
+            'credit' => 0,
+            'error' => null
+        ];
+
+        try {
+            $result['posted_date'] = Carbon::parse($row[0])->format('Y-m-d');
+            $result['transaction_date'] = Carbon::parse($row[1])->format('Y-m-d');
+            $result['transaction_detail'] = $row[2];
+            $result['debit'] = !empty($row[3]) ? floatval($row[3]) : 0;
+            $result['credit'] = !empty($row[4]) ? floatval($row[4]) : 0;
+
+            if ($result['debit'] == 0 && $result['credit'] == 0) {
+                $result['error'] = "Row {$rowNumber}: No debit or credit amount";
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            $result['error'] = "Row {$rowNumber}: Error parsing generic format - " . $e->getMessage();
+            return $result;
+        }
+    }
+
+    /**
+     * Placeholder for Maybank format
+     */
+    private function parseMaybankFormat($row, $rowNumber)
+    {
+        // For now, use generic format - can be customized later
+        return $this->parseGenericFormat($row, $rowNumber);
+    }
+
+    /**
+     * Placeholder for Public Bank format
+     */
+    private function parsePublicBankFormat($row, $rowNumber)
+    {
+        // For now, use generic format - can be customized later
+        return $this->parseGenericFormat($row, $rowNumber);
+    }
+
+    /**
+     * Placeholder for Bank Islam format
+     */
+    private function parseBankIslamFormat($row, $rowNumber)
+    {
+        // For now, use generic format - can be customized later
+        return $this->parseGenericFormat($row, $rowNumber);
+    }
+
+    /**
+     * Placeholder for Bank Rakyat format
+     */
+    private function parseBankRakyatFormat($row, $rowNumber)
+    {
+        // For now, use generic format - can be customized later
+        return $this->parseGenericFormat($row, $rowNumber);
     }
 }

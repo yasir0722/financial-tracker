@@ -24,20 +24,38 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle"></i> CSV File Format</h6>
-                        <p>Your CSV file should have the following columns in this exact order:</p>
-                        <ol>
-                            <li><strong>Posted Date</strong> - Format: YYYY-MM-DD or MM/DD/YYYY</li>
-                            <li><strong>Transaction Date</strong> - Format: YYYY-MM-DD or MM/DD/YYYY</li>
-                            <li><strong>Transaction Detail</strong> - Description of the transaction</li>
-                            <li><strong>Debit Amount</strong> - Leave empty if not a debit (expense)</li>
-                            <li><strong>Credit Amount</strong> - Leave empty if not a credit (income)</li>
-                        </ol>
-                        <p class="mb-0">
-                            <strong>Example:</strong><br>
-                            <code>2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,<br>
-                            2025-10-02,2025-10-02,"Salary Deposit",,2500.00</code>
-                        </p>
+                        <h6><i class="fas fa-info-circle"></i> Bank-Specific CSV Formats Supported</h6>
+                        <p>Select your bank first, then upload the CSV file. We support the following formats:</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>🏦 CIMB Bank:</strong>
+                                <ol class="small">
+                                    <li>Posting Date (dd-MMM-yyyy)</li>
+                                    <li>Transaction Date (dd-MMM-yyyy)</li>
+                                    <li>Transaction Details</li>
+                                    <li>Debit(RM)</li>
+                                    <li>Credit(RM)</li>
+                                </ol>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>🏦 Other Banks:</strong>
+                                <ol class="small">
+                                    <li>Posted Date (YYYY-MM-DD)</li>
+                                    <li>Transaction Date (YYYY-MM-DD)</li>
+                                    <li>Transaction Detail</li>
+                                    <li>Debit Amount</li>
+                                    <li>Credit Amount</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <strong>📝 CIMB Example:</strong><br>
+                            <code class="small">"19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</code><br>
+                            <strong>📝 Generic Example:</strong><br>
+                            <code class="small">2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,</code>
+                        </div>
                     </div>
 
                     <!-- Sample CSV Download -->
@@ -70,11 +88,11 @@
                         
                         <div class="form-group">
                             <label for="bank_id" class="form-label">Select Bank <span class="text-danger">*</span></label>
-                            <select name="bank_id" id="bank_id" class="form-control @error('bank_id') is-invalid @enderror" required>
+                            <select name="bank_id" id="bank_id" class="form-control @error('bank_id') is-invalid @enderror" required onchange="updateFormatInfo()">
                                 <option value="">Choose a bank...</option>
-                                @foreach(\App\Models\Bank::all() as $bank)
-                                    <option value="{{ $bank->id }}" {{ old('bank_id') == $bank->id ? 'selected' : '' }}>
-                                        {{ $bank->name }}
+                                @foreach(\App\Models\Bank::orderBy('type', 'desc')->orderBy('name')->get() as $bank)
+                                    <option value="{{ $bank->id }}" data-bank-name="{{ $bank->name }}" {{ old('bank_id') == $bank->id ? 'selected' : '' }}>
+                                        {{ $bank->name }} ({{ $bank->type ? 'Bank' : 'Financial Institution' }})
                                     </option>
                                 @endforeach
                             </select>
@@ -95,15 +113,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">Maximum file size: 2MB. Accepted formats: .csv, .txt</small>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="confirm_format" required>
-                                <label class="form-check-label" for="confirm_format">
-                                    I confirm that my CSV file follows the correct format as described above
-                                </label>
-                            </div>
                         </div>
 
                         <div class="form-group text-center">
@@ -216,14 +225,82 @@ function parseCSVLine(line) {
     return result;
 }
 
+// Update format information based on selected bank
+function updateFormatInfo() {
+    const bankSelect = document.getElementById('bank_id');
+    const formatInfo = document.getElementById('format-info');
+    const selectedBankName = document.getElementById('selected-bank-name');
+    const formatDetails = document.getElementById('format-details');
+    
+    if (bankSelect.value) {
+        const selectedOption = bankSelect.options[bankSelect.selectedIndex];
+        const bankName = selectedOption.getAttribute('data-bank-name');
+        
+        selectedBankName.textContent = bankName;
+        
+        // Bank-specific format information
+        let formatHTML = '';
+        switch (bankName.toLowerCase()) {
+            case 'cimb bank':
+                formatHTML = `
+                    <ol class="mb-2">
+                        <li><strong>Posting Date:</strong> dd-MMM-yyyy (e.g., "19-Aug-2025")</li>
+                        <li><strong>Transaction Date:</strong> dd-MMM-yyyy (e.g., "17-Aug-2025")</li>
+                        <li><strong>Transaction Details:</strong> Description text</li>
+                        <li><strong>Debit(RM):</strong> Amount or empty</li>
+                        <li><strong>Credit(RM):</strong> Amount or empty</li>
+                    </ol>
+                    <small><strong>Example:</strong> "19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</small>
+                `;
+                break;
+            default:
+                formatHTML = `
+                    <ol class="mb-2">
+                        <li><strong>Posted Date:</strong> YYYY-MM-DD or MM/DD/YYYY</li>
+                        <li><strong>Transaction Date:</strong> YYYY-MM-DD or MM/DD/YYYY</li>
+                        <li><strong>Transaction Detail:</strong> Description text</li>
+                        <li><strong>Debit Amount:</strong> Amount or empty</li>
+                        <li><strong>Credit Amount:</strong> Amount or empty</li>
+                    </ol>
+                    <small><strong>Example:</strong> 2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,</small>
+                `;
+                break;
+        }
+        
+        formatDetails.innerHTML = formatHTML;
+        formatInfo.style.display = 'block';
+    } else {
+        formatInfo.style.display = 'none';
+    }
+}
+
 // Download sample CSV
 function downloadSample() {
-    const csvContent = `Posted Date,Transaction Date,Transaction Detail,Debit,Credit
+    const bankSelect = document.getElementById('bank_id');
+    let csvContent;
+    
+    if (bankSelect.value) {
+        const selectedOption = bankSelect.options[bankSelect.selectedIndex];
+        const bankName = selectedOption.getAttribute('data-bank-name');
+        
+        if (bankName.toLowerCase() === 'cimb bank') {
+            csvContent = `Posting Date,Transaction Date,Transaction Details,Debit(RM),Credit(RM)
+"19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306        SELANGOR     MY|||","46.20","",
+"19-Aug-2025","17-Aug-2025","HEROMARKET KIP MALL BA SPB>B.BANGI    MY|||","71.50","",
+"03-Aug-2025","03-Aug-2025","TRANSFER / TOP-UP THANK YOU-CLICKS|FROM MUHAMMAD YASIR BIN AZMAN|CC July|Payment Desc","","2524.46",`;
+        } else {
+            csvContent = `Posted Date,Transaction Date,Transaction Detail,Debit,Credit
 2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,
 2025-10-02,2025-10-02,"Gas Station",32.50,
 2025-10-03,2025-10-03,"Salary Deposit",,2500.00
 2025-10-04,2025-10-04,"Electric Bill Payment",125.75,
 2025-10-05,2025-10-05,"Freelance Income",,450.00`;
+        }
+    } else {
+        csvContent = `Posted Date,Transaction Date,Transaction Detail,Debit,Credit
+2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,
+2025-10-02,2025-10-02,"Salary Deposit",,2500.00`;
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
