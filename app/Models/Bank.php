@@ -11,7 +11,12 @@ class Bank extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name'
+        'name',
+        'type'
+    ];
+
+    protected $casts = [
+        'type' => 'boolean'
     ];
 
     /**
@@ -30,5 +35,29 @@ class Bank extends Model
         return $this->transactions()
             ->selectRaw('COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as balance')
             ->value('balance') ?? 0;
+    }
+
+    /**
+     * Scope to get only banks (type = true)
+     */
+    public function scopeBanks($query)
+    {
+        return $query->where('type', true);
+    }
+
+    /**
+     * Scope to get only other financial institutions (type = false)
+     */
+    public function scopeOtherInstitutions($query)
+    {
+        return $query->where('type', false);
+    }
+
+    /**
+     * Get the display type
+     */
+    public function getTypeDisplayAttribute(): string
+    {
+        return $this->type ? 'Bank' : 'Financial Institution';
     }
 }

@@ -13,13 +13,36 @@ class BankSeeder extends Seeder
      */
     public function run(): void
     {
+        // Update existing banks to have type = true
+        DB::table('banks')->whereIn('name', [
+            'Bank Islam', 'Maybank', 'CIMB Bank', 'Public Bank'
+        ])->update(['type' => true]);
+
+        // Regular Banks (type = true) - Insert if not exists
         $banks = [
-            ['name' => 'Bank Islam'],
-            ['name' => 'Maybank'],
-            ['name' => 'CIMB Bank'],
-            ['name' => 'Public Bank'],
+            ['name' => 'Bank Islam', 'type' => true],
+            ['name' => 'Maybank', 'type' => true],
+            ['name' => 'CIMB Bank', 'type' => true],
+            ['name' => 'Public Bank', 'type' => true],
+            ['name' => 'Bank Rakyat', 'type' => true],
         ];
 
-        DB::table('banks')->insert($banks);
+        // Other Financial Institutions (type = false)
+        $otherInstitutions = [
+            ['name' => 'Tabung Haji', 'type' => false],
+            ['name' => 'ASB', 'type' => false],
+            ['name' => 'KWSP', 'type' => false],
+        ];
+
+        // Insert banks that don't exist
+        foreach (array_merge($banks, $otherInstitutions) as $bank) {
+            DB::table('banks')->updateOrInsert(
+                ['name' => $bank['name']], 
+                array_merge($bank, [
+                    'created_at' => now(), 
+                    'updated_at' => now()
+                ])
+            );
+        }
     }
 }

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->date('posted_date')->nullable();
-            $table->json('transaction_data')->nullable();
+            $table->date('posted_date');
+            $table->date('transaction_date');
             $table->text('transaction_detail');
             $table->decimal('debit', 15, 2)->default(0.00);
             $table->decimal('credit', 15, 2)->default(0.00);
