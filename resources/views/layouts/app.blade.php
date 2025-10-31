@@ -140,6 +140,13 @@
                                 Transactions
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('spending-types.*') ? 'active' : '' }}" 
+                               href="{{ route('spending-types.index') }}">
+                                <i class="fas fa-tags"></i>
+                                Spending Types
+                            </a>
+                        </li>
                     </ul>
 
                     <!-- Quick Actions -->

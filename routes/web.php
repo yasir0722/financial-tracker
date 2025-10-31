@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\SpendingTypeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,3 +30,11 @@ Route::resource('transactions', TransactionController::class);
 // CSV Import routes
 Route::get('/transactions/import/form', [TransactionController::class, 'importForm'])->name('transactions.import.form');
 Route::post('/transactions/import', [TransactionController::class, 'import'])->name('transactions.import');
+Route::post('/transactions/suggest-keywords', [TransactionController::class, 'suggestKeywords'])->name('transactions.suggest-keywords');
+Route::post('/transactions/add-keywords', [TransactionController::class, 'addKeywords'])->name('transactions.add-keywords');
+
+// Spending Type Management routes
+Route::get('/spending-types', [SpendingTypeController::class, 'index'])->name('spending-types.index');
+Route::get('/spending-types/{spendingType}/edit', [SpendingTypeController::class, 'edit'])->name('spending-types.edit');
+Route::put('/spending-types/{spendingType}', [SpendingTypeController::class, 'update'])->name('spending-types.update');
+Route::post('/spending-types/add-keyword', [SpendingTypeController::class, 'addKeywordFromTransaction'])->name('spending-types.add-keyword');

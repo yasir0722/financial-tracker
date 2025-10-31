@@ -575,4 +575,61 @@ class TransactionController extends Controller
         // For now, use generic format - can be customized later
         return $this->parseGenericFormat($row, $rowNumber);
     }
+
+    /**
+     * Suggest keywords from transaction details that weren't automatically categorized
+     */
+    public function suggestKeywords(Request $request)
+    {
+        $validated = $request->validate([
+            'transaction_detail' => 'required|string',
+            'spending_type_id' => 'required|exists:ref_spending_types,id'
+        ]);
+
+        $spendingType = \App\Models\RefSpendingType::findOrFail($validated['spending_type_id']);
+        $detail = strtolower($validated['transaction_detail']);
+        
+        // Extract potential keywords (words with 3+ characters)
+        preg_match_all('/\b[a-z]{3,}\b/', $detail, $matches);
+        $words = $matches[0];
+        
+        // Common words to exclude
+        $commonWords = ['the', 'and', 'for', 'with', 'from', 'payment', 'transaction', 'purchase', 'sale', 'via', 'online'];
+        
+        // Filter out common words and existing keywords
+        $existingKeywords = $spendingType->keywords ?? [];
+        $suggestedKeywords = array_diff($words, $commonWords, $existingKeywords);
+        
+        return response()->json([
+            'success' => true,
+            'suggested_keywords' => array_values(array_unique($suggestedKeywords)),
+            'existing_keywords' => $existingKeywords
+        ]);
+    }
+
+    /**
+     * Add suggested keywords to a spending type
+     */
+    public function addKeywords(Request $request)
+    {
+        $validated = $request->validate([
+            'spending_type_id' => 'required|exists:ref_spending_types,id',
+            'keywords' => 'required|array',
+            'keywords.*' => 'string|min:2'
+        ]);
+
+        $spendingType = \App\Models\RefSpendingType::findOrFail($validated['spending_type_id']);
+        $existingKeywords = $spendingType->keywords ?? [];
+        
+        // Merge and deduplicate keywords
+        $updatedKeywords = array_unique(array_merge($existingKeywords, $validated['keywords']));
+        
+        $spendingType->update(['keywords' => array_values($updatedKeywords)]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Keywords added successfully',
+            'keywords' => $updatedKeywords
+        ]);
+    }
 }
