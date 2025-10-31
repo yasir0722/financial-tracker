@@ -42,7 +42,80 @@ class TransactionController extends Controller
 
         $banks = Bank::all();
 
-        return view('transactions.index', compact('transactions', 'banks'));
+        // Generate quick date options
+        $quickDates = $this->generateQuickDates($request);
+
+        return view('transactions.index', compact('transactions', 'banks', 'quickDates'));
+    }
+
+    /**
+     * Generate quick date selection options
+     */
+    private function generateQuickDates(Request $request)
+    {
+        $currentDate = Carbon::now();
+        $quickDates = [];
+
+        // Monthly buttons (last 6 months)
+        for ($i = 0; $i < 6; $i++) {
+            $monthDate = $currentDate->copy()->subMonths($i);
+            $monthStart = $monthDate->copy()->startOfMonth()->format('Y-m-d');
+            $monthEnd = $monthDate->copy()->endOfMonth()->format('Y-m-d');
+            $monthName = $monthDate->format('M Y');
+            $isActive = ($request->get('date_from') == $monthStart && $request->get('date_to') == $monthEnd);
+
+            $quickDates[] = [
+                'label' => $monthName,
+                'start_date' => $monthStart,
+                'end_date' => $monthEnd,
+                'is_active' => $isActive,
+                'button_class' => $isActive ? 'btn-primary' : 'btn-outline-primary',
+                'icon' => 'fas fa-calendar'
+            ];
+        }
+
+        // Last 30 Days
+        $last30Start = $currentDate->copy()->subDays(30)->format('Y-m-d');
+        $todayEnd = $currentDate->format('Y-m-d');
+        $isLast30Active = ($request->get('date_from') == $last30Start && $request->get('date_to') == $todayEnd);
+
+        $quickDates[] = [
+            'label' => 'Last 30 Days',
+            'start_date' => $last30Start,
+            'end_date' => $todayEnd,
+            'is_active' => $isLast30Active,
+            'button_class' => $isLast30Active ? 'btn-success' : 'btn-outline-success',
+            'icon' => 'fas fa-clock'
+        ];
+
+        // Last 90 Days
+        $last90Start = $currentDate->copy()->subDays(90)->format('Y-m-d');
+        $isLast90Active = ($request->get('date_from') == $last90Start && $request->get('date_to') == $todayEnd);
+
+        $quickDates[] = [
+            'label' => 'Last 90 Days',
+            'start_date' => $last90Start,
+            'end_date' => $todayEnd,
+            'is_active' => $isLast90Active,
+            'button_class' => $isLast90Active ? 'btn-info' : 'btn-outline-info',
+            'icon' => 'fas fa-history'
+        ];
+
+        // This Year
+        $thisYearStart = $currentDate->copy()->startOfYear()->format('Y-m-d');
+        $thisYearEnd = $currentDate->copy()->endOfYear()->format('Y-m-d');
+        $isThisYearActive = ($request->get('date_from') == $thisYearStart && $request->get('date_to') == $thisYearEnd);
+
+        $quickDates[] = [
+            'label' => $currentDate->format('Y'),
+            'start_date' => $thisYearStart,
+            'end_date' => $thisYearEnd,
+            'is_active' => $isThisYearActive,
+            'button_class' => $isThisYearActive ? 'btn-warning' : 'btn-outline-warning',
+            'icon' => 'fas fa-calendar-year'
+        ];
+
+        return $quickDates;
     }
 
     /**
@@ -168,7 +241,8 @@ class TransactionController extends Controller
     public function import(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'csv_file' => 'required|file|mimes:csv,txt|max:2048',
+            'csv_files' => 'required|array|max:20',
+            'csv_files.*' => 'file|mimes:csv,txt|max:2048',
             'bank_id' => 'required|exists:banks,id'
         ]);
 
@@ -179,19 +253,28 @@ class TransactionController extends Controller
         }
 
         try {
-            $file = $request->file('csv_file');
-            $path = $file->store('temp');
-            $fullPath = storage_path('app/' . $path);
-
-            $csvData = array_map('str_getcsv', file($fullPath));
-            $header = array_shift($csvData); // Remove header row
-
-            $importedCount = 0;
-            $updatedCount = 0;
-            $errors = [];
+            $files = $request->file('csv_files');
+            $totalImportedCount = 0;
+            $totalUpdatedCount = 0;
+            $allErrors = [];
+            $processedFiles = 0;
 
             // Get bank information to determine format
             $bank = Bank::find($request->bank_id);
+
+            foreach ($files as $fileIndex => $file) {
+                $fileName = $file->getClientOriginalName();
+                
+                try {
+                    $path = $file->store('temp');
+                    $fullPath = storage_path('app/' . $path);
+
+                    $csvData = array_map('str_getcsv', file($fullPath));
+                    $header = array_shift($csvData); // Remove header row
+
+                    $importedCount = 0;
+                    $updatedCount = 0;
+                    $errors = [];
             
             foreach ($csvData as $index => $row) {
                 if (count($row) < 4) {
@@ -230,33 +313,53 @@ class TransactionController extends Controller
                 }
             }
 
-            // Clean up temp file
-            Storage::delete($path);
+                    // Add file-specific errors to total errors
+                    if (!empty($errors)) {
+                        foreach ($errors as $error) {
+                            $allErrors[] = "File '{$fileName}': {$error}";
+                        }
+                    }
+
+                    // Add to totals
+                    $totalImportedCount += $importedCount;
+                    $totalUpdatedCount += $updatedCount;
+                    $processedFiles++;
+
+                    // Clean up temp file
+                    Storage::delete($path);
+
+                } catch (\Exception $fileException) {
+                    $allErrors[] = "File '{$fileName}': Error processing file - " . $fileException->getMessage();
+                }
+            }
 
             // Build success message
             $messageParts = [];
-            if ($importedCount > 0) {
-                $messageParts[] = "Created {$importedCount} new transactions";
+            if ($processedFiles > 0) {
+                $messageParts[] = "Processed {$processedFiles} file(s)";
             }
-            if ($updatedCount > 0) {
-                $messageParts[] = "Updated {$updatedCount} existing transactions";
+            if ($totalImportedCount > 0) {
+                $messageParts[] = "Created {$totalImportedCount} new transactions";
+            }
+            if ($totalUpdatedCount > 0) {
+                $messageParts[] = "Updated {$totalUpdatedCount} existing transactions";
             }
             
             $message = !empty($messageParts) 
-                ? implode(' and ', $messageParts) . " successfully."
+                ? implode(', ', $messageParts) . " successfully."
                 : "No transactions were processed.";
                 
-            if (!empty($errors)) {
-                $message .= " " . count($errors) . " rows had errors.";
+            if (!empty($allErrors)) {
+                $message .= " " . count($allErrors) . " errors occurred.";
             }
 
             return redirect()->route('transactions.index')
                            ->with('success', $message)
-                           ->with('import_errors', $errors);
+                           ->with('import_errors', $allErrors);
 
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->withErrors(['csv_file' => 'Error processing file: ' . $e->getMessage()]);
+                           ->withErrors(['csv_files' => 'Error processing files: ' . $e->getMessage()]);
         }
     }
 

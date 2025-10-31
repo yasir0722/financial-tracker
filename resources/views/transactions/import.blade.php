@@ -70,7 +70,7 @@
             <!-- Upload Form -->
             <div class="card shadow">
                 <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-primary">Upload CSV File</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Upload CSV Files (Multiple Files Supported)</h6>
                 </div>
                 <div class="card-body">
                     @if($errors->any())
@@ -82,6 +82,27 @@
                             </ul>
                         </div>
                     @endif
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-layer-group"></i> Multiple Files Support</h6>
+                                <p class="mb-0">
+                                    <strong>Bulk Import:</strong> Upload up to 20 CSV files at once! 
+                                    Perfect for importing multiple months or different account statements.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-shield-alt"></i> Duplicate Protection</h6>
+                                <p class="mb-0">
+                                    <strong>Safe to re-upload:</strong> Duplicate transactions are automatically 
+                                    updated instead of creating duplicates across all files.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <form action="{{ route('transactions.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
@@ -103,16 +124,26 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="csv_file" class="form-label">CSV File <span class="text-danger">*</span></label>
+                            <label for="csv_files" class="form-label">CSV Files <span class="text-danger">*</span></label>
                             <div class="custom-file">
-                                <input type="file" class="custom-file-input @error('csv_file') is-invalid @enderror" 
-                                       id="csv_file" name="csv_file" accept=".csv,.txt" required>
-                                <label class="custom-file-label" for="csv_file">Choose CSV file...</label>
+                                <input type="file" class="custom-file-input @error('csv_files') is-invalid @enderror" 
+                                       id="csv_files" name="csv_files[]" accept=".csv,.txt" multiple required>
+                                <label class="custom-file-label" for="csv_files">Choose CSV files...</label>
                             </div>
-                            @error('csv_file')
+                            @error('csv_files')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Maximum file size: 2MB. Accepted formats: .csv, .txt</small>
+                        </div>
+
+                        <!-- Selected Files List -->
+                        <div id="selected-files-container" class="form-group" style="display: none;">
+                            <label class="form-label">Selected Files:</label>
+                            <div id="selected-files-list" class="border rounded p-3 bg-light">
+                                <!-- Files will be listed here dynamically -->
+                            </div>
+                            <small class="form-text text-muted">
+                                <span id="file-count">0</span> file(s) selected (max 20)
+                            </small>
                         </div>
 
                         <div class="form-group text-center">
@@ -152,16 +183,78 @@
 
 @push('scripts')
 <script>
-// Update file label when file is selected
-document.getElementById('csv_file').addEventListener('change', function(e) {
-    const fileName = e.target.files[0]?.name || 'Choose CSV file...';
+// Update file label and list when files are selected
+document.getElementById('csv_files').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    const maxFiles = 20;
+    
+    // Check file limit
+    if (files.length > maxFiles) {
+        alert(`Maximum ${maxFiles} files allowed. Please select fewer files.`);
+        e.target.value = '';
+        return;
+    }
+    
+    // Update file label
+    const fileName = files.length > 1 
+        ? `${files.length} files selected`
+        : files.length === 1 
+            ? files[0].name 
+            : 'Choose CSV files...';
     document.querySelector('.custom-file-label').textContent = fileName;
     
-    // Preview CSV content
-    if (e.target.files[0]) {
-        previewCSV(e.target.files[0]);
+    // Update file list
+    updateFileList(files);
+    
+    // Preview first file
+    if (files.length > 0) {
+        previewCSV(files[0]);
     }
 });
+
+// Update the selected files list
+function updateFileList(files) {
+    const container = document.getElementById('selected-files-container');
+    const filesList = document.getElementById('selected-files-list');
+    const fileCount = document.getElementById('file-count');
+    
+    if (files.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    // Show container
+    container.style.display = 'block';
+    
+    // Update file count
+    fileCount.textContent = files.length;
+    
+    // Create file list HTML
+    let filesHTML = '<div class="row">';
+    files.forEach((file, index) => {
+        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+        const isValid = file.size <= 2048000; // 2MB limit
+        
+        filesHTML += `
+            <div class="col-md-6 mb-2">
+                <div class="d-flex align-items-center ${isValid ? '' : 'text-danger'}">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    <div class="flex-grow-1">
+                        <div class="small font-weight-bold">${file.name}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">${fileSize}</div>
+                    </div>
+                    ${isValid 
+                        ? '<i class="fas fa-check-circle text-success"></i>' 
+                        : '<i class="fas fa-exclamation-triangle text-danger" title="File too large"></i>'
+                    }
+                </div>
+            </div>
+        `;
+    });
+    filesHTML += '</div>';
+    
+    filesList.innerHTML = filesHTML;
+}
 
 // Preview CSV file content
 function previewCSV(file) {

@@ -63,6 +63,24 @@
                                 <a href="{{ route('transactions.index') }}" class="btn btn-secondary">Clear</a>
                             </div>
                         </div>
+
+                        <!-- Quick Date Shortcuts -->
+                        <div class="row mt-3 pt-3 border-top">
+                            <div class="col-12">
+                                <label class="form-label text-muted mb-2">
+                                    <i class="fas fa-calendar-alt"></i> Quick Date Selection:
+                                </label>
+                                <div class="d-flex flex-wrap">
+                                    @foreach($quickDates as $quickDate)
+                                        <button type="button" 
+                                                class="btn btn-sm {{ $quickDate['button_class'] }} date-shortcut me-2 mb-2"
+                                                onclick="selectDateRange('{{ $quickDate['start_date'] }}', '{{ $quickDate['end_date'] }}')">
+                                            <i class="{{ $quickDate['icon'] }}"></i> {{ $quickDate['label'] }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -191,4 +209,36 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+// Function to select date range from quick shortcuts
+function selectDateRange(startDate, endDate) {
+    // Set the date input fields
+    document.getElementById('date_from').value = startDate;
+    document.getElementById('date_to').value = endDate;
+    
+    // Submit the form automatically
+    document.querySelector('form[method="GET"]').submit();
+}
+
+// Add some CSS for better button spacing
+document.addEventListener('DOMContentLoaded', function() {
+    // Add custom styling
+    const style = document.createElement('style');
+    style.textContent = `
+        .date-shortcut {
+            margin-right: 0.25rem !important;
+            margin-bottom: 0.25rem !important;
+            font-size: 0.875rem;
+        }
+        .gap-2 > * {
+            margin-right: 0.25rem;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+@endpush
+
 @endsection
