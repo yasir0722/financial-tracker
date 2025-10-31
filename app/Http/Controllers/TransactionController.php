@@ -32,12 +32,18 @@ class TransactionController extends Controller
             $query->where('transaction_date', '<=', $request->date_to);
         }
 
+        // Filter by spending type
+        if ($request->filled('spending_type_id')) {
+            $query->where('spending_type_id', $request->spending_type_id);
+        }
+
         // Search in transaction details
         if ($request->filled('search')) {
             $query->where('transaction_detail', 'like', '%' . $request->search . '%');
         }
 
-        $transactions = $query->orderBy('transaction_date', 'desc')
+        $transactions = $query->with(['bank', 'spendingType'])
+                            ->orderBy('transaction_date', 'desc')
                             ->paginate(50);
 
         $banks = Bank::all();
@@ -45,7 +51,10 @@ class TransactionController extends Controller
         // Generate quick date options
         $quickDates = $this->generateQuickDates($request);
 
-        return view('transactions.index', compact('transactions', 'banks', 'quickDates'));
+        // Get spending types for filter dropdown
+        $spendingTypes = \App\Models\RefSpendingType::getOptions();
+
+        return view('transactions.index', compact('transactions', 'banks', 'quickDates', 'spendingTypes'));
     }
 
     /**
@@ -135,7 +144,8 @@ class TransactionController extends Controller
     public function create()
     {
         $banks = Bank::all();
-        return view('transactions.create', compact('banks'));
+        $spendingTypes = \App\Models\RefSpendingType::getOptions();
+        return view('transactions.create', compact('banks', 'spendingTypes'));
     }
 
     /**
@@ -184,7 +194,8 @@ class TransactionController extends Controller
     public function edit(Transaction $transaction)
     {
         $banks = Bank::all();
-        return view('transactions.edit', compact('transaction', 'banks'));
+        $spendingTypes = \App\Models\RefSpendingType::getOptions();
+        return view('transactions.edit', compact('transaction', 'banks', 'spendingTypes'));
     }
 
     /**
@@ -311,7 +322,8 @@ class TransactionController extends Controller
                     ], [
                         // Fields to update if record exists
                         'debit' => $parsedData['debit'],
-                        'credit' => $parsedData['credit']
+                        'credit' => $parsedData['credit'],
+                        'spending_type_id' => $parsedData['spending_type_id']
                     ]);
 
                     if ($transaction->wasRecentlyCreated) {
@@ -385,6 +397,7 @@ class TransactionController extends Controller
             'transaction_detail' => null,
             'debit' => 0,
             'credit' => 0,
+            'spending_type_id' => null,
             'error' => null
         ];
 
@@ -427,6 +440,7 @@ class TransactionController extends Controller
             'transaction_detail' => null,
             'debit' => 0,
             'credit' => 0,
+            'spending_type_id' => null,
             'error' => null
         ];
 
@@ -444,6 +458,9 @@ class TransactionController extends Controller
             
             $result['debit'] = !empty($debitStr) ? floatval(str_replace(',', '', $debitStr)) : 0;
             $result['credit'] = !empty($creditStr) ? floatval(str_replace(',', '', $creditStr)) : 0;
+
+            // Auto-detect spending type based on transaction details
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
 
             if ($result['debit'] == 0 && $result['credit'] == 0) {
                 $result['error'] = "Row {$rowNumber}: No debit or credit amount";
@@ -468,6 +485,7 @@ class TransactionController extends Controller
             'transaction_detail' => null,
             'debit' => 0,
             'credit' => 0,
+            'spending_type_id' => null,
             'error' => null
         ];
 
@@ -478,6 +496,9 @@ class TransactionController extends Controller
             $result['debit'] = !empty($row[3]) ? floatval($row[3]) : 0;
             $result['credit'] = !empty($row[4]) ? floatval($row[4]) : 0;
 
+            // Auto-detect spending type
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
+
             if ($result['debit'] == 0 && $result['credit'] == 0) {
                 $result['error'] = "Row {$rowNumber}: No debit or credit amount";
             }
@@ -487,6 +508,36 @@ class TransactionController extends Controller
             $result['error'] = "Row {$rowNumber}: Error parsing generic format - " . $e->getMessage();
             return $result;
         }
+    }
+
+    /**
+     * Auto-detect spending type ID based on transaction description
+     */
+    private function detectSpendingTypeId($transactionDetail): ?int
+    {
+        $detail = strtolower($transactionDetail);
+        
+        // Get all active spending types with keywords
+        $spendingTypes = \App\Models\RefSpendingType::active()->get();
+        
+        // Try to match keywords for each spending type
+        foreach ($spendingTypes as $spendingType) {
+            if (empty($spendingType->keywords)) {
+                continue;
+            }
+            
+            // Build regex pattern from keywords
+            $keywords = array_map('preg_quote', $spendingType->keywords);
+            $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
+            
+            if (preg_match($pattern, $detail)) {
+                return $spendingType->id;
+            }
+        }
+        
+        // Default to 'others' if no match found
+        $othersType = \App\Models\RefSpendingType::findByCode('others');
+        return $othersType?->id;
     }
 
     /**

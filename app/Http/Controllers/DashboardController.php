@@ -44,24 +44,27 @@ class DashboardController extends Controller
             ->orderBy('month', 'asc')
             ->get();
 
-        // Get spending by category/description patterns for current month
-        $currentMonthSpending = Transaction::selectRaw('
-                CASE 
-                    WHEN LOWER(transaction_detail) LIKE "%grocery%" OR LOWER(transaction_detail) LIKE "%foodpanda%" OR LOWER(transaction_detail) LIKE "%grab%" THEN "Food & Groceries"
-                    WHEN LOWER(transaction_detail) LIKE "%petrol%" OR LOWER(transaction_detail) LIKE "%fuel%" THEN "Transportation"
-                    WHEN LOWER(transaction_detail) LIKE "%utility%" OR LOWER(transaction_detail) LIKE "%electricity%" OR LOWER(transaction_detail) LIKE "%water%" THEN "Utilities"
-                    WHEN LOWER(transaction_detail) LIKE "%shopping%" OR LOWER(transaction_detail) LIKE "%lazada%" OR LOWER(transaction_detail) LIKE "%shopee%" THEN "Shopping"
-                    WHEN LOWER(transaction_detail) LIKE "%transfer%" OR LOWER(transaction_detail) LIKE "%payment%" THEN "Transfers"
-                    ELSE "Others"
-                END as category,
-                COALESCE(SUM(debit), 0) as total_spent
-            ')
+        // Get spending by actual spending types for current month
+        $currentMonthSpending = Transaction::select(
+                'ref_spending_types.name as category_name',
+                'ref_spending_types.code as category',
+                DB::raw('COALESCE(SUM(transactions.debit), 0) as total_spent')
+            )
+            ->leftJoin('ref_spending_types', 'transactions.spending_type_id', '=', 'ref_spending_types.id')
             ->whereMonth('transaction_date', now()->month)
             ->whereYear('transaction_date', now()->year)
             ->where('debit', '>', 0)
-            ->groupBy('category')
+            ->groupBy('ref_spending_types.id', 'ref_spending_types.name', 'ref_spending_types.code')
             ->orderBy('total_spent', 'desc')
-            ->get();
+            ->get()
+            ->map(function($item) {
+                // Use "Uncategorized" for null spending types
+                if (!$item->category_name) {
+                    $item->category_name = 'Uncategorized';
+                    $item->category = 'uncategorized';
+                }
+                return $item;
+            });
 
         return view('dashboard', compact(
             'totalBalance',

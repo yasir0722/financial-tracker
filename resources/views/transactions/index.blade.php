@@ -52,6 +52,18 @@
                                 <input type="date" name="date_to" id="date_to" 
                                        class="form-control" value="{{ request('date_to') }}">
                             </div>
+                            <div class="col-md-2">
+                                <label for="spending_type_id" class="form-label">Spending Type</label>
+                                <select name="spending_type_id" id="spending_type_id" class="form-control">
+                                    <option value="">All Types</option>
+                                    @foreach($spendingTypes as $id => $name)
+                                        <option value="{{ $id }}" 
+                                            {{ request('spending_type_id') == $id ? 'selected' : '' }}>
+                                            {{ $name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-md-3">
                                 <label for="search" class="form-label">Search Description</label>
                                 <input type="text" name="search" id="search" 
@@ -128,6 +140,7 @@
                                     <th>Posted Date</th>
                                     <th>Transaction Date</th>
                                     <th>Bank</th>
+                                    <th>Type</th>
                                     <th>Description</th>
                                     <th class="text-right">Debit</th>
                                     <th class="text-right">Credit</th>
@@ -142,6 +155,18 @@
                                     <td>{{ $transaction->transaction_date->format('M d, Y') }}</td>
                                     <td>
                                         <span class="badge badge-primary bank-badge">{{ $transaction->bank->name }}</span>
+                                    </td>
+                                    <td>
+                                        @if($transaction->spendingType)
+                                            <span class="badge {{ $transaction->spending_type_badge_class }} spending-type-badge">
+                                                @if($transaction->spending_type_icon)
+                                                    <i class="{{ $transaction->spending_type_icon }} mr-1"></i>
+                                                @endif
+                                                {{ $transaction->spending_type_name }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">Not set</span>
+                                        @endif
                                     </td>
                                     <td>{{ $transaction->transaction_detail }}</td>
                                     <td class="text-right text-danger">
@@ -182,7 +207,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-4">
+                                    <td colspan="9" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-3x mb-3"></i>
                                             <h5>No transactions found</h5>
@@ -262,6 +287,50 @@ document.addEventListener('DOMContentLoaded', function() {
         .bank-badge:hover {
             background-color: #0056b3 !important;
             color: #ffffff !important;
+        }
+        
+        /* Spending type badge styling */
+        .spending-type-badge {
+            font-size: 0.65rem !important;
+            padding: 0.2rem 0.4rem !important;
+            border-radius: 0.2rem !important;
+            font-weight: 500 !important;
+        }
+        
+        .badge-success {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-warning {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+        
+        .badge-info {
+            background-color: #17a2b8 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-danger {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-secondary {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-dark {
+            background-color: #343a40 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-light {
+            background-color: #f8f9fa !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6 !important;
         }
         
         /* Top pagination styling (in card header) */

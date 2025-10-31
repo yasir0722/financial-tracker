@@ -16,7 +16,8 @@ class Transaction extends Model
         'transaction_detail',
         'debit',
         'credit',
-        'bank_id'
+        'bank_id',
+        'spending_type_id'
     ];
 
     protected $casts = [
@@ -35,6 +36,14 @@ class Transaction extends Model
     }
 
     /**
+     * Get the spending type for this transaction.
+     */
+    public function spendingType(): BelongsTo
+    {
+        return $this->belongsTo(RefSpendingType::class, 'spending_type_id');
+    }
+
+    /**
      * Get the transaction amount (credit - debit)
      */
     public function getAmountAttribute(): float
@@ -48,5 +57,45 @@ class Transaction extends Model
     public function scopeDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('transaction_date', [$startDate, $endDate]);
+    }
+
+    /**
+     * Get formatted spending type name
+     */
+    public function getSpendingTypeNameAttribute(): string
+    {
+        return $this->spendingType?->name ?? 'Not Set';
+    }
+
+    /**
+     * Get spending type badge class
+     */
+    public function getSpendingTypeBadgeClassAttribute(): string
+    {
+        return $this->spendingType?->badge_class ?? 'badge-secondary';
+    }
+
+    /**
+     * Get spending type code
+     */
+    public function getSpendingTypeCodeAttribute(): ?string
+    {
+        return $this->spendingType?->code;
+    }
+
+    /**
+     * Get spending type icon
+     */
+    public function getSpendingTypeIconAttribute(): ?string
+    {
+        return $this->spendingType?->icon;
+    }
+
+    /**
+     * Scope to filter by spending type
+     */
+    public function scopeOfType($query, $typeId)
+    {
+        return $query->where('spending_type_id', $typeId);
     }
 }

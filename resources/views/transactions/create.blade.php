@@ -75,15 +75,37 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <label for="transaction_detail" class="form-label">Transaction Detail <span class="text-danger">*</span></label>
-                            <input type="text" name="transaction_detail" id="transaction_detail" 
-                                   class="form-control @error('transaction_detail') is-invalid @enderror" 
-                                   value="{{ old('transaction_detail') }}" 
-                                   placeholder="Enter transaction description..." required>
-                            @error('transaction_detail')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="transaction_detail" class="form-label">Transaction Detail <span class="text-danger">*</span></label>
+                                    <input type="text" name="transaction_detail" id="transaction_detail" 
+                                           class="form-control @error('transaction_detail') is-invalid @enderror" 
+                                           value="{{ old('transaction_detail') }}" 
+                                           placeholder="Enter transaction description..." required>
+                                    @error('transaction_detail')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="spending_type_id" class="form-label">Spending Type</label>
+                                    <select name="spending_type_id" id="spending_type_id" 
+                                            class="form-control @error('spending_type_id') is-invalid @enderror">
+                                        <option value="">Choose type...</option>
+                                        @foreach($spendingTypes as $id => $name)
+                                            <option value="{{ $id }}" {{ old('spending_type_id') == $id ? 'selected' : '' }}>
+                                                {{ $name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('spending_type_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Optional: Categorize your transaction</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">

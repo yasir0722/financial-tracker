@@ -140,7 +140,7 @@
                                         ($loop->index == 3 ? '#9b59b6' : 
                                         ($loop->index == 4 ? '#1abc9c' : '#95a5a6'))))
                                      }};"></div>
-                                <small class="text-gray-600">{{ $spending->category }}</small>
+                                <small class="text-gray-600">{{ $spending->category_name }}</small>
                             </div>
                             <small class="font-weight-bold text-danger">
                                 ${{ number_format($spending->total_spent, 2) }}
@@ -412,7 +412,7 @@ const spendingColors = ['#e74a3b', '#f39c12', '#3498db', '#9b59b6', '#1abc9c', '
 new Chart(spendingCtx, {
     type: 'doughnut',
     data: {
-        labels: spendingData.map(item => item.category),
+        labels: spendingData.map(item => item.category_name),
         datasets: [{
             data: spendingData.map(item => parseFloat(item.total_spent)),
             backgroundColor: spendingColors.slice(0, spendingData.length),
