@@ -541,12 +541,21 @@ class TransactionController extends Controller
                 continue;
             }
             
-            // Build regex pattern from keywords
-            $keywords = array_map('preg_quote', $spendingType->keywords);
-            $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
-            
-            if (preg_match($pattern, $detail)) {
-                return $spendingType->id;
+            // Check each keyword
+            foreach ($spendingType->keywords as $keyword) {
+                $keyword = strtolower($keyword);
+                
+                // First try exact word boundary match
+                $pattern = '/\b' . preg_quote($keyword, '/') . '\b/';
+                if (preg_match($pattern, $detail)) {
+                    return $spendingType->id;
+                }
+                
+                // Then try partial match (keyword is contained in a word)
+                // This allows "shawarma" to match "shawarmax"
+                if (strpos($detail, $keyword) !== false) {
+                    return $spendingType->id;
+                }
             }
         }
         

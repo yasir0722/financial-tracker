@@ -88,10 +88,27 @@ class SpendingTypeController extends Controller
             
             // Check if any of the new keywords match this transaction
             if (!empty($spendingType->keywords)) {
-                $keywords = array_map('preg_quote', $spendingType->keywords);
-                $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
+                $matchFound = false;
                 
-                if (preg_match($pattern, $detail)) {
+                // Check each keyword with both exact and partial matching
+                foreach ($spendingType->keywords as $keyword) {
+                    $keyword = strtolower($keyword);
+                    
+                    // First try exact word boundary match
+                    $pattern = '/\b' . preg_quote($keyword, '/') . '\b/';
+                    if (preg_match($pattern, $detail)) {
+                        $matchFound = true;
+                        break;
+                    }
+                    
+                    // Then try partial match (keyword is contained in a word)
+                    if (strpos($detail, $keyword) !== false) {
+                        $matchFound = true;
+                        break;
+                    }
+                }
+                
+                if ($matchFound) {
                     // Update to this spending type
                     if ($transaction->spending_type_id != $spendingTypeId) {
                         $transaction->update(['spending_type_id' => $spendingTypeId]);
@@ -127,12 +144,21 @@ class SpendingTypeController extends Controller
                 continue;
             }
             
-            // Build regex pattern from keywords
-            $keywords = array_map('preg_quote', $spendingType->keywords);
-            $pattern = '/\b(' . implode('|', $keywords) . ')\b/';
-            
-            if (preg_match($pattern, $detail)) {
-                return $spendingType->id;
+            // Check each keyword
+            foreach ($spendingType->keywords as $keyword) {
+                $keyword = strtolower($keyword);
+                
+                // First try exact word boundary match
+                $pattern = '/\b' . preg_quote($keyword, '/') . '\b/';
+                if (preg_match($pattern, $detail)) {
+                    return $spendingType->id;
+                }
+                
+                // Then try partial match (keyword is contained in a word)
+                // This allows "shawarma" to match "shawarmax"
+                if (strpos($detail, $keyword) !== false) {
+                    return $spendingType->id;
+                }
             }
         }
         
