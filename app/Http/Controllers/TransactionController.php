@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
 use App\Models\Bank;
+use App\Models\RefSpendingType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -486,8 +487,8 @@ class TransactionController extends Controller
             $result['debit'] = !empty($debitStr) ? floatval(str_replace(',', '', $debitStr)) : 0;
             $result['credit'] = !empty($creditStr) ? floatval(str_replace(',', '', $creditStr)) : 0;
 
-            // Auto-detect spending type based on transaction details
-            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
+            // Auto-detect spending type (credit transactions will be overridden to Income)
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail'], $result['credit']);
 
             if ($result['debit'] == 0 && $result['credit'] == 0) {
                 $result['error'] = "Row {$rowNumber}: No debit or credit amount";
@@ -523,8 +524,8 @@ class TransactionController extends Controller
             $result['debit'] = !empty($row[3]) ? floatval($row[3]) : 0;
             $result['credit'] = !empty($row[4]) ? floatval($row[4]) : 0;
 
-            // Auto-detect spending type
-            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
+            // Auto-detect spending type (credit transactions will be overridden to Income)
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail'], $result['credit']);
 
             if ($result['debit'] == 0 && $result['credit'] == 0) {
                 $result['error'] = "Row {$rowNumber}: No debit or credit amount";
@@ -539,10 +540,14 @@ class TransactionController extends Controller
 
     /**
      * Auto-detect spending type ID based on transaction description
+     * Credit transactions are ALWAYS categorized as Income, overriding any keyword matches
      */
-    private function detectSpendingTypeId($transactionDetail): ?int
+    private function detectSpendingTypeId($transactionDetail, $credit = 0): ?int
     {
         $detail = strtolower($transactionDetail);
+        
+        // First, run keyword matching
+        $matchedSpendingTypeId = null;
         
         // Get all active spending types with keywords, ordered by sort_order
         $spendingTypes = \App\Models\RefSpendingType::active()->ordered()->get();
@@ -560,20 +565,32 @@ class TransactionController extends Controller
                 // First try exact word boundary match
                 $pattern = '/\b' . preg_quote($keyword, '/') . '\b/';
                 if (preg_match($pattern, $detail)) {
-                    return $spendingType->id;
+                    $matchedSpendingTypeId = $spendingType->id;
+                    break 2; // Exit both loops
                 }
                 
                 // Then try partial match (keyword is contained in a word)
                 // This allows "shawarma" to match "shawarmax"
                 if (strpos($detail, $keyword) !== false) {
-                    return $spendingType->id;
+                    $matchedSpendingTypeId = $spendingType->id;
+                    break 2; // Exit both loops
                 }
             }
         }
         
-        // Default to 'others' if no match found
-        $othersType = \App\Models\RefSpendingType::findByCode('others');
-        return $othersType?->id;
+        // If no keyword match found, default to 'others'
+        if ($matchedSpendingTypeId === null) {
+            $othersType = \App\Models\RefSpendingType::findByCode('others');
+            $matchedSpendingTypeId = $othersType?->id;
+        }
+        
+        // OVERRIDE: All credit transactions are categorized as Income, regardless of keywords
+        if ($credit > 0) {
+            $incomeType = RefSpendingType::where('name', 'Income')->first();
+            return $incomeType?->id ?? $matchedSpendingTypeId;
+        }
+        
+        return $matchedSpendingTypeId;
     }
 
     /**
@@ -652,8 +669,8 @@ class TransactionController extends Controller
             $result['debit'] = !empty($withdrawalStr) && $withdrawalStr !== '-' ? abs(floatval($withdrawalStr)) : 0;
             $result['credit'] = !empty($depositStr) && $depositStr !== '-' ? abs(floatval($depositStr)) : 0;
 
-            // Auto-detect spending type based on transaction details
-            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
+            // Auto-detect spending type (credit transactions will be overridden to Income)
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail'], $result['credit']);
 
             if ($result['debit'] == 0 && $result['credit'] == 0) {
                 $result['error'] = "Row {$rowNumber}: No debit or credit amount";
@@ -780,7 +797,9 @@ class TransactionController extends Controller
 
         foreach ($transactions as $transaction) {
             $oldSpendingTypeId = $transaction->spending_type_id;
-            $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);
+            
+            // Auto-detect spending type (credit transactions will be overridden to Income)
+            $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail, $transaction->credit);
             
             // Only update if the spending type changed
             if ($oldSpendingTypeId != $newSpendingTypeId) {
@@ -903,8 +922,8 @@ class TransactionController extends Controller
                             $credit = floatval($amount);
                         }
                         
-                        // Auto-detect spending type
-                        $spendingTypeId = $this->detectSpendingTypeId($fullDescription);
+                        // Auto-detect spending type (credit transactions will be overridden to Income)
+                        $spendingTypeId = $this->detectSpendingTypeId($fullDescription, $credit);
                         
                         $transactions[] = [
                             'posted_date' => $parsedDate,
