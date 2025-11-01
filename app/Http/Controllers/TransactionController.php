@@ -42,8 +42,19 @@ class TransactionController extends Controller
             $query->where('transaction_detail', 'like', '%' . $request->search . '%');
         }
 
+        // Sorting
+        $sortField = $request->get('sort', 'transaction_date');
+        $sortDirection = $request->get('direction', 'desc');
+        
+        // Validate sort field to prevent SQL injection
+        $allowedSortFields = ['posted_date', 'transaction_date', 'transaction_detail', 'debit', 'credit'];
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('transaction_date', 'desc');
+        }
+
         $transactions = $query->with(['bank', 'spendingType'])
-                            ->orderBy('transaction_date', 'desc')
                             ->paginate(50);
 
         $banks = Bank::all();

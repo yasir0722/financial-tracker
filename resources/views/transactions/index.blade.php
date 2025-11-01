@@ -137,13 +137,63 @@
                         <table class="table table-bordered table-hover">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>Posted Date</th>
-                                    <th>Transaction Date</th>
+                                    <th>
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'posted_date', 'direction' => request('sort') == 'posted_date' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Posted Date
+                                            @if(request('sort') == 'posted_date')
+                                                <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'transaction_date', 'direction' => request('sort') == 'transaction_date' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Transaction Date
+                                            @if(request('sort') == 'transaction_date' || !request('sort'))
+                                                <i class="fas fa-sort-{{ (request('direction') ?? 'desc') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
+                                    </th>
                                     <th>Bank</th>
                                     <th>Type</th>
-                                    <th>Description</th>
-                                    <th class="text-right">Debit</th>
-                                    <th class="text-right">Credit</th>
+                                    <th>
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'transaction_detail', 'direction' => request('sort') == 'transaction_detail' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Description
+                                            @if(request('sort') == 'transaction_detail')
+                                                <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
+                                    </th>
+                                    <th class="text-right">
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'debit', 'direction' => request('sort') == 'debit' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Debit
+                                            @if(request('sort') == 'debit')
+                                                <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
+                                    </th>
+                                    <th class="text-right">
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'credit', 'direction' => request('sort') == 'credit' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Credit
+                                            @if(request('sort') == 'credit')
+                                                <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
+                                    </th>
                                     <th class="text-right">Balance Impact</th>
                                     <th width="100">Actions</th>
                                 </tr>
