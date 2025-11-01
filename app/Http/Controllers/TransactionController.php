@@ -832,29 +832,60 @@ class TransactionController extends Controller
             // Extract transactions from PDF text
             $lines = explode("\n", $text);
             
-            // Maybank format: DD/MM/YY Description Amount(+/-) Balance
-            // Pattern: 02/08/25IBK FUND TFR FR A/C     12.00-  524.02
+            // Maybank format: DD/MM/YY Description (multi-line) Amount(+/-) Balance
+            // Line 1: 26/09/25IBK FUND TFR TO A/C     598.00+  767.32
+            // Line 2:    CIK UMMU RAFIATUL A*
+            // Line 3:    DUITNOW QR-
             
-            foreach ($lines as $line) {
-                $line = trim($line);
+            $i = 0;
+            while ($i < count($lines)) {
+                $line = trim($lines[$i]);
                 
                 // Skip empty lines and header lines
                 if (empty($line) || 
                     strpos($line, 'ENTRY DATE') !== false || 
                     strpos($line, 'TRANSACTION DESCRIPTION') !== false ||
-                    strpos($line, 'BEGINNING BALANCE') !== false) {
+                    strpos($line, 'BEGINNING BALANCE') !== false ||
+                    strpos($line, 'STATEMENT BALANCE') !== false) {
+                    $i++;
                     continue;
                 }
                 
                 // Maybank Islamic pattern: DD/MM/YY followed by description, amount with +/-, and balance
                 // Match: 02/08/25IBK FUND TFR FR A/C     12.00-  524.02
-                // OR: 05/08/25FUND TRANSFER TO A/     50.00+  602.52
                 if (preg_match('/^(\d{2}\/\d{2}\/\d{2})(.+?)\s+([\d,]+\.\d{2})([+-])\s+([\d,]+\.\d{2})/', $line, $matches)) {
                     $date = $matches[1];
                     $description = trim($matches[2]);
                     $amount = str_replace(',', '', $matches[3]);
                     $sign = $matches[4];
                     $balance = str_replace(',', '', $matches[5]);
+                    
+                    // Collect multi-line description details
+                    $descriptionLines = [$description];
+                    $j = $i + 1;
+                    
+                    // Look ahead for continuation lines (lines that don't start with a date)
+                    while ($j < count($lines)) {
+                        $nextLine = trim($lines[$j]);
+                        
+                        // Stop if next line is empty, a new transaction (starts with date), or a header
+                        if (empty($nextLine) || 
+                            preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine) ||
+                            strpos($nextLine, 'Maybank Islamic') !== false ||
+                            strpos($nextLine, 'MUKA/') !== false) {
+                            break;
+                        }
+                        
+                        // Add continuation line, removing asterisks and extra spaces
+                        $cleanLine = trim(str_replace('*', '', $nextLine));
+                        if (!empty($cleanLine)) {
+                            $descriptionLines[] = $cleanLine;
+                        }
+                        $j++;
+                    }
+                    
+                    // Combine all description lines
+                    $fullDescription = implode(' - ', $descriptionLines);
                     
                     try {
                         // Convert DD/MM/YY to full year (assume 2000s)
@@ -873,21 +904,28 @@ class TransactionController extends Controller
                         }
                         
                         // Auto-detect spending type
-                        $spendingTypeId = $this->detectSpendingTypeId($description);
+                        $spendingTypeId = $this->detectSpendingTypeId($fullDescription);
                         
                         $transactions[] = [
                             'posted_date' => $parsedDate,
                             'transaction_date' => $parsedDate,
-                            'transaction_detail' => $description,
+                            'transaction_detail' => $fullDescription,
                             'debit' => $debit,
                             'credit' => $credit,
                             'spending_type_id' => $spendingTypeId
                         ];
+                        
+                        // Skip the lines we've already processed
+                        $i = $j;
+                        continue;
                     } catch (\Exception $e) {
                         // Skip invalid date lines
+                        $i++;
                         continue;
                     }
                 }
+                
+                $i++;
             }
             
             if (empty($transactions)) {
