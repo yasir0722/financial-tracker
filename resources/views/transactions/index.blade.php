@@ -160,7 +160,7 @@
                                         @if($transaction->spendingType)
                                             <span class="badge {{ $transaction->spending_type_badge_class }} spending-type-badge">
                                                 @if($transaction->spending_type_icon)
-                                                    <i class="{{ $transaction->spending_type_icon }} mr-1"></i>
+                                                    <i class="fas fa-{{ $transaction->spending_type_icon }} mr-1"></i>
                                                 @endif
                                                 {{ $transaction->spending_type_name }}
                                             </span>

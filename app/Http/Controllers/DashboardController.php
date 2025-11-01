@@ -45,14 +45,18 @@ class DashboardController extends Controller
             ->get();
 
         // Get spending by actual spending types for current month
+        // First, get the latest month with transaction data
+        $latestTransactionDate = Transaction::max('transaction_date');
+        $latestMonth = $latestTransactionDate ? \Carbon\Carbon::parse($latestTransactionDate) : now();
+        
         $currentMonthSpending = Transaction::select(
                 'ref_spending_types.name as category_name',
                 'ref_spending_types.code as category',
                 DB::raw('COALESCE(SUM(transactions.debit), 0) as total_spent')
             )
             ->leftJoin('ref_spending_types', 'transactions.spending_type_id', '=', 'ref_spending_types.id')
-            ->whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year)
+            ->whereMonth('transaction_date', $latestMonth->month)
+            ->whereYear('transaction_date', $latestMonth->year)
             ->where('debit', '>', 0)
             ->groupBy('ref_spending_types.id', 'ref_spending_types.name', 'ref_spending_types.code')
             ->orderBy('total_spent', 'desc')
@@ -74,7 +78,8 @@ class DashboardController extends Controller
             'recentTransactions',
             'bankBalances',
             'monthlySummary',
-            'currentMonthSpending'
+            'currentMonthSpending',
+            'latestMonth'
         ));
     }
 }

@@ -21,7 +21,7 @@
                                 Total Balance
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ${{ number_format($totalBalance, 2) }}
+                                RM{{ number_format($totalBalance, 2) }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -41,7 +41,7 @@
                                 Total Income
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ${{ number_format($totalIncome, 2) }}
+                                RM{{ number_format($totalIncome, 2) }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -61,7 +61,7 @@
                                 Total Expenses
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ${{ number_format($totalExpense, 2) }}
+                                RM{{ number_format($totalExpense, 2) }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -120,7 +120,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-pie mr-2"></i>{{ now()->format('M Y') }} Spending
+                        <i class="fas fa-chart-pie mr-2"></i>{{ $latestMonth->format('M Y') }} Spending
                     </h6>
                 </div>
                 <div class="card-body">
@@ -143,7 +143,7 @@
                                 <small class="text-gray-600">{{ $spending->category_name }}</small>
                             </div>
                             <small class="font-weight-bold text-danger">
-                                ${{ number_format($spending->total_spent, 2) }}
+                                RM{{ number_format($spending->total_spent, 2) }}
                             </small>
                         </div>
                         @endforeach
@@ -176,7 +176,7 @@
                             <div class="small text-gray-500">{{ $bankBalance->name }}</div>
                             <div class="font-weight-bold 
                                 @if($bankBalance->balance >= 0) text-success @else text-danger @endif">
-                                ${{ number_format($bankBalance->balance, 2) }}
+                                RM{{ number_format($bankBalance->balance, 2) }}
                             </div>
                         </div>
                         <div class="progress progress-sm">
@@ -209,7 +209,7 @@
                                     <i class="fas fa-arrow-up text-success fa-2x mb-2"></i>
                                     <div class="small text-gray-500">This Month Income</div>
                                     <div class="h6 text-success font-weight-bold">
-                                        ${{ number_format($currentMonth->income, 2) }}
+                                        RM{{ number_format($currentMonth->income, 2) }}
                                     </div>
                                 </div>
                             </div>
@@ -218,7 +218,7 @@
                                     <i class="fas fa-arrow-down text-danger fa-2x mb-2"></i>
                                     <div class="small text-gray-500">This Month Spending</div>
                                     <div class="h6 text-danger font-weight-bold">
-                                        ${{ number_format($currentMonth->expense, 2) }}
+                                        RM{{ number_format($currentMonth->expense, 2) }}
                                     </div>
                                 </div>
                             </div>
@@ -228,7 +228,7 @@
                             <div class="small text-gray-500">Net Change</div>
                             <div class="h5 font-weight-bold 
                                 @if($currentMonth->income - $currentMonth->expense >= 0) text-success @else text-danger @endif">
-                                ${{ number_format($currentMonth->income - $currentMonth->expense, 2) }}
+                                RM{{ number_format($currentMonth->income - $currentMonth->expense, 2) }}
                             </div>
                         </div>
                     @else
@@ -271,16 +271,16 @@
                                     <td>{{ Str::limit($transaction->transaction_detail, 50) }}</td>
                                     <td class="text-danger">
                                         @if($transaction->debit > 0)
-                                            ${{ number_format($transaction->debit, 2) }}
+                                            RM{{ number_format($transaction->debit, 2) }}
                                         @endif
                                     </td>
                                     <td class="text-success">
                                         @if($transaction->credit > 0)
-                                            ${{ number_format($transaction->credit, 2) }}
+                                            RM{{ number_format($transaction->credit, 2) }}
                                         @endif
                                     </td>
                                     <td class="@if($transaction->credit > $transaction->debit) text-success @else text-danger @endif">
-                                        ${{ number_format($transaction->credit - $transaction->debit, 2) }}
+                                        RM{{ number_format($transaction->credit - $transaction->debit, 2) }}
                                     </td>
                                 </tr>
                                 @empty
@@ -356,7 +356,7 @@ new Chart(ctx, {
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                        return context.dataset.label + ': RM' + context.parsed.y.toLocaleString();
                     }
                 }
             }
@@ -374,7 +374,7 @@ new Chart(ctx, {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return '$' + value.toLocaleString();
+                        return 'RM' + value.toLocaleString();
                     }
                 },
                 grid: {
@@ -388,7 +388,7 @@ new Chart(ctx, {
                 beginAtZero: false,
                 ticks: {
                     callback: function(value) {
-                        return '$' + value.toLocaleString();
+                        return 'RM' + value.toLocaleString();
                     }
                 },
                 grid: {
@@ -433,7 +433,7 @@ new Chart(spendingCtx, {
                     label: function(context) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((context.parsed / total) * 100).toFixed(1);
-                        return context.label + ': $' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                        return context.label + ': RM' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
                     }
                 }
             }
