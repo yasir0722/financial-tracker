@@ -43,9 +43,10 @@ class SpendingTypeController extends Controller
         // Store old keywords to check if they changed
         $oldKeywords = $spendingType->keywords ?? [];
 
-        // Convert keywords string to array
+        // Convert keywords string to array and lowercase
         if (!empty($validated['keywords'])) {
             $keywordsArray = array_map('trim', explode(',', $validated['keywords']));
+            $keywordsArray = array_map('strtolower', $keywordsArray); // Convert to lowercase
             $validated['keywords'] = array_filter($keywordsArray); // Remove empty values
         } else {
             $validated['keywords'] = [];

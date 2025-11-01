@@ -70,7 +70,7 @@
                                        class="form-control" value="{{ request('search') }}" 
                                        placeholder="Search transaction details...">
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
+                            <div class="col-md-2 pt-3 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary mr-2">Filter</button>
                                 <a href="{{ route('transactions.index') }}" class="btn btn-secondary">Clear</a>
                             </div>
