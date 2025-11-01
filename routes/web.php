@@ -39,3 +39,5 @@ Route::get('/spending-types', [SpendingTypeController::class, 'index'])->name('s
 Route::get('/spending-types/{spendingType}/edit', [SpendingTypeController::class, 'edit'])->name('spending-types.edit');
 Route::put('/spending-types/{spendingType}', [SpendingTypeController::class, 'update'])->name('spending-types.update');
 Route::post('/spending-types/add-keyword', [SpendingTypeController::class, 'addKeywordFromTransaction'])->name('spending-types.add-keyword');
+Route::post('/spending-types/update-sort', [SpendingTypeController::class, 'updateSortOrder'])->name('spending-types.update-sort');
+Route::post('/spending-types/recategorize-all', [SpendingTypeController::class, 'recategorizeAll'])->name('spending-types.recategorize-all');

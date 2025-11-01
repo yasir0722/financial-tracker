@@ -136,8 +136,8 @@ class SpendingTypeController extends Controller
     {
         $detail = strtolower($transactionDetail);
         
-        // Get all active spending types with keywords
-        $spendingTypes = RefSpendingType::active()->get();
+        // Get all active spending types with keywords, ordered by sort_order
+        $spendingTypes = RefSpendingType::active()->ordered()->get();
         
         // Try to match keywords for each spending type
         foreach ($spendingTypes as $spendingType) {
@@ -203,5 +203,67 @@ class SpendingTypeController extends Controller
             'message' => 'Keywords added successfully',
             'keywords' => $updatedKeywords
         ]);
+    }
+
+    /**
+     * Update the sort order for spending types
+     */
+    public function updateSortOrder(Request $request)
+    {
+        $sortData = $request->input('sort_order', []);
+        
+        if (empty($sortData)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No sort order data provided'
+            ], 400);
+        }
+
+        try {
+            foreach ($sortData as $id => $sortOrder) {
+                RefSpendingType::where('id', $id)->update(['sort_order' => $sortOrder]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sort order updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating sort order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Re-categorize all transactions based on current keywords and sort order
+     */
+    public function recategorizeAll()
+    {
+        try {
+            $count = 0;
+            $transactions = \App\Models\Transaction::all();
+            
+            foreach ($transactions as $transaction) {
+                $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);
+                
+                if ($newSpendingTypeId && $newSpendingTypeId != $transaction->spending_type_id) {
+                    $transaction->update(['spending_type_id' => $newSpendingTypeId]);
+                    $count++;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'count' => $count,
+                'message' => "Successfully re-categorized {$count} transactions"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error re-categorizing transactions: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

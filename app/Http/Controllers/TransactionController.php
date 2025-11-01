@@ -532,8 +532,8 @@ class TransactionController extends Controller
     {
         $detail = strtolower($transactionDetail);
         
-        // Get all active spending types with keywords
-        $spendingTypes = \App\Models\RefSpendingType::active()->get();
+        // Get all active spending types with keywords, ordered by sort_order
+        $spendingTypes = \App\Models\RefSpendingType::active()->ordered()->get();
         
         // Try to match keywords for each spending type
         foreach ($spendingTypes as $spendingType) {
