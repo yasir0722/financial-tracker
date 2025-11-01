@@ -284,13 +284,13 @@ class TransactionController extends Controller
     }
 
     /**
-     * Import transactions from CSV file
+     * Import transactions from CSV/PDF file
      */
     public function import(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'csv_files' => 'required|array|max:20',
-            'csv_files.*' => 'file|mimes:csv,txt|max:2048',
+            'csv_files.*' => 'file|mimes:csv,txt,pdf|max:5120', // Increased to 5MB for PDF files
             'bank_id' => 'required|exists:banks,id'
         ]);
 
@@ -312,55 +312,56 @@ class TransactionController extends Controller
 
             foreach ($files as $fileIndex => $file) {
                 $fileName = $file->getClientOriginalName();
+                $fileExtension = strtolower($file->getClientOriginalExtension());
                 
                 try {
                     $path = $file->store('temp');
                     $fullPath = storage_path('app/' . $path);
 
-                    $csvData = array_map('str_getcsv', file($fullPath));
-                    $header = array_shift($csvData); // Remove header row
+                    // Check if file is PDF (for Maybank)
+                    if ($fileExtension === 'pdf') {
+                        $transactions = $this->parseMaybankPDF($fullPath, $bank);
+                    } else {
+                        // CSV processing
+                        $csvData = array_map('str_getcsv', file($fullPath));
+                        $header = array_shift($csvData); // Remove header row
+                        $transactions = $this->processCsvData($csvData, $bank, $request->bank_id);
+                    }
 
                     $importedCount = 0;
                     $updatedCount = 0;
                     $errors = [];
             
-            foreach ($csvData as $index => $row) {
-                if (count($row) < 4) {
-                    $errors[] = "Row " . ($index + 2) . ": Insufficient data";
-                    continue;
-                }
+                    foreach ($transactions as $parsedData) {
+                        if (isset($parsedData['error'])) {
+                            $errors[] = $parsedData['error'];
+                            continue;
+                        }
 
-                try {
-                    $parsedData = $this->parseCsvRowByBank($row, $bank, $index + 2);
-                    
-                    if ($parsedData['error']) {
-                        $errors[] = $parsedData['error'];
-                        continue;
+                        try {
+                            // Use updateOrCreate to prevent duplicates
+                            $transaction = Transaction::updateOrCreate([
+                                // Unique identifier fields
+                                'posted_date' => $parsedData['posted_date'],
+                                'transaction_date' => $parsedData['transaction_date'],
+                                'transaction_detail' => $parsedData['transaction_detail'],
+                                'bank_id' => $request->bank_id
+                            ], [
+                                // Fields to update if record exists
+                                'debit' => $parsedData['debit'],
+                                'credit' => $parsedData['credit'],
+                                'spending_type_id' => $parsedData['spending_type_id']
+                            ]);
+
+                            if ($transaction->wasRecentlyCreated) {
+                                $importedCount++;
+                            } else {
+                                $updatedCount++;
+                            }
+                        } catch (\Exception $e) {
+                            $errors[] = "Transaction: " . $e->getMessage();
+                        }
                     }
-
-                    // Use updateOrCreate to prevent duplicates
-                    $transaction = Transaction::updateOrCreate([
-                        // Unique identifier fields
-                        'posted_date' => $parsedData['posted_date'],
-                        'transaction_date' => $parsedData['transaction_date'],
-                        'transaction_detail' => $parsedData['transaction_detail'],
-                        'bank_id' => $request->bank_id
-                    ], [
-                        // Fields to update if record exists
-                        'debit' => $parsedData['debit'],
-                        'credit' => $parsedData['credit'],
-                        'spending_type_id' => $parsedData['spending_type_id']
-                    ]);
-
-                    if ($transaction->wasRecentlyCreated) {
-                        $importedCount++;
-                    } else {
-                        $updatedCount++;
-                    }
-                } catch (\Exception $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
-                }
-            }
 
                     // Add file-specific errors to total errors
                     if (!empty($errors)) {
@@ -576,12 +577,93 @@ class TransactionController extends Controller
     }
 
     /**
-     * Placeholder for Maybank format
+     * Parse Maybank CSV format
+     * Format: Date, Description, Withdrawal (RM), Deposit (RM), Balance (RM)
+     * OR: Transaction Date, Reference, Description, Withdrawal, Deposit, Balance
      */
     private function parseMaybankFormat($row, $rowNumber)
     {
-        // For now, use generic format - can be customized later
-        return $this->parseGenericFormat($row, $rowNumber);
+        $result = [
+            'posted_date' => null,
+            'transaction_date' => null,
+            'transaction_detail' => null,
+            'debit' => 0,
+            'credit' => 0,
+            'spending_type_id' => null,
+            'error' => null
+        ];
+
+        try {
+            // Check if we have at least 5 columns (Date, Description, Withdrawal, Deposit, Balance)
+            if (count($row) < 5) {
+                $result['error'] = "Row {$rowNumber}: Insufficient columns for Maybank format";
+                return $result;
+            }
+
+            // Parse date (Maybank typically uses dd/MM/yyyy or dd MMM yyyy format)
+            $dateStr = trim($row[0], '"');
+            
+            // Try multiple date formats
+            $dateFormats = ['d/m/Y', 'd/M/Y', 'd M Y', 'd-M-Y', 'Y-m-d'];
+            $parsedDate = null;
+            
+            foreach ($dateFormats as $format) {
+                try {
+                    $parsedDate = Carbon::createFromFormat($format, $dateStr);
+                    break;
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            
+            if (!$parsedDate) {
+                $result['error'] = "Row {$rowNumber}: Invalid date format '{$dateStr}'";
+                return $result;
+            }
+            
+            $result['posted_date'] = $parsedDate->format('Y-m-d');
+            $result['transaction_date'] = $parsedDate->format('Y-m-d');
+            
+            // Check if there's a reference column (6 columns format)
+            // Format 1: Date, Reference, Description, Withdrawal, Deposit, Balance (6 columns)
+            // Format 2: Date, Description, Withdrawal, Deposit, Balance (5 columns)
+            $hasReference = count($row) >= 6 && !empty(trim($row[1], '"'));
+            
+            if ($hasReference) {
+                // Reference exists, description is in column 2
+                $result['transaction_detail'] = trim($row[2], '"');
+                $withdrawalCol = 3;
+                $depositCol = 4;
+            } else {
+                // No reference, description is in column 1
+                $result['transaction_detail'] = trim($row[1], '"');
+                $withdrawalCol = 2;
+                $depositCol = 3;
+            }
+            
+            // Parse amounts (Withdrawal = Debit, Deposit = Credit)
+            $withdrawalStr = trim($row[$withdrawalCol], '"');
+            $depositStr = trim($row[$depositCol], '"');
+            
+            // Remove currency symbols, commas, and spaces
+            $withdrawalStr = preg_replace('/[^0-9.-]/', '', $withdrawalStr);
+            $depositStr = preg_replace('/[^0-9.-]/', '', $depositStr);
+            
+            $result['debit'] = !empty($withdrawalStr) && $withdrawalStr !== '-' ? abs(floatval($withdrawalStr)) : 0;
+            $result['credit'] = !empty($depositStr) && $depositStr !== '-' ? abs(floatval($depositStr)) : 0;
+
+            // Auto-detect spending type based on transaction details
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail']);
+
+            if ($result['debit'] == 0 && $result['credit'] == 0) {
+                $result['error'] = "Row {$rowNumber}: No debit or credit amount";
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            $result['error'] = "Row {$rowNumber}: Error parsing Maybank format - " . $e->getMessage();
+            return $result;
+        }
     }
 
     /**
@@ -713,5 +795,116 @@ class TransactionController extends Controller
             'updated_count' => $updatedCount,
             'total_checked' => $transactions->count()
         ]);
+    }
+
+    /**
+     * Process CSV data into transactions array
+     */
+    private function processCsvData($csvData, $bank, $bankId)
+    {
+        $transactions = [];
+        
+        foreach ($csvData as $index => $row) {
+            if (count($row) < 4) {
+                $transactions[] = ['error' => "Row " . ($index + 2) . ": Insufficient data"];
+                continue;
+            }
+
+            $parsedData = $this->parseCsvRowByBank($row, $bank, $index + 2);
+            $transactions[] = $parsedData;
+        }
+        
+        return $transactions;
+    }
+
+    /**
+     * Parse Maybank PDF statement
+     */
+    private function parseMaybankPDF($pdfPath, $bank)
+    {
+        $transactions = [];
+        
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf = $parser->parseFile($pdfPath);
+            $text = $pdf->getText();
+            
+            // Extract transactions from PDF text
+            $lines = explode("\n", $text);
+            
+            // Maybank format: DD/MM/YY Description Amount(+/-) Balance
+            // Pattern: 02/08/25IBK FUND TFR FR A/C     12.00-  524.02
+            
+            foreach ($lines as $line) {
+                $line = trim($line);
+                
+                // Skip empty lines and header lines
+                if (empty($line) || 
+                    strpos($line, 'ENTRY DATE') !== false || 
+                    strpos($line, 'TRANSACTION DESCRIPTION') !== false ||
+                    strpos($line, 'BEGINNING BALANCE') !== false) {
+                    continue;
+                }
+                
+                // Maybank Islamic pattern: DD/MM/YY followed by description, amount with +/-, and balance
+                // Match: 02/08/25IBK FUND TFR FR A/C     12.00-  524.02
+                // OR: 05/08/25FUND TRANSFER TO A/     50.00+  602.52
+                if (preg_match('/^(\d{2}\/\d{2}\/\d{2})(.+?)\s+([\d,]+\.\d{2})([+-])\s+([\d,]+\.\d{2})/', $line, $matches)) {
+                    $date = $matches[1];
+                    $description = trim($matches[2]);
+                    $amount = str_replace(',', '', $matches[3]);
+                    $sign = $matches[4];
+                    $balance = str_replace(',', '', $matches[5]);
+                    
+                    try {
+                        // Convert DD/MM/YY to full year (assume 2000s)
+                        $parsedDate = Carbon::createFromFormat('d/m/y', $date)->format('Y-m-d');
+                        
+                        // Determine debit or credit based on +/- sign
+                        $debit = 0;
+                        $credit = 0;
+                        
+                        if ($sign === '-') {
+                            // Minus sign means withdrawal/debit
+                            $debit = floatval($amount);
+                        } else {
+                            // Plus sign means deposit/credit
+                            $credit = floatval($amount);
+                        }
+                        
+                        // Auto-detect spending type
+                        $spendingTypeId = $this->detectSpendingTypeId($description);
+                        
+                        $transactions[] = [
+                            'posted_date' => $parsedDate,
+                            'transaction_date' => $parsedDate,
+                            'transaction_detail' => $description,
+                            'debit' => $debit,
+                            'credit' => $credit,
+                            'spending_type_id' => $spendingTypeId
+                        ];
+                    } catch (\Exception $e) {
+                        // Skip invalid date lines
+                        continue;
+                    }
+                }
+            }
+            
+            if (empty($transactions)) {
+                $transactions[] = ['error' => 'No transactions found in PDF. Please ensure this is a valid Maybank statement.'];
+            }
+            
+        } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+            
+            // Check if it's a secured PDF error
+            if (stripos($errorMessage, 'secured') !== false || stripos($errorMessage, 'encrypted') !== false) {
+                $transactions[] = ['error' => 'PDF is password-protected. Please remove the password first: Open the PDF, print to PDF (uncheck password protection), then upload the new file.'];
+            } else {
+                $transactions[] = ['error' => 'Error parsing PDF: ' . $errorMessage];
+            }
+        }
+        
+        return $transactions;
     }
 }

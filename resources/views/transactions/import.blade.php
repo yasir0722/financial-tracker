@@ -28,7 +28,7 @@
                         <p>Select your bank first, then upload the CSV file. We support the following formats:</p>
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <strong>🏦 CIMB Bank:</strong>
                                 <ol class="small">
                                     <li>Posting Date (dd-MMM-yyyy)</li>
@@ -38,7 +38,22 @@
                                     <li>Credit(RM)</li>
                                 </ol>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <strong>🏦 Maybank:</strong>
+                                <ol class="small">
+                                    <li><strong>Format:</strong> PDF Statement</li>
+                                    <li>Upload your Maybank PDF statement</li>
+                                    <li>Transactions will be extracted automatically</li>
+                                </ol>
+                                <div class="alert alert-warning small mb-0 p-2">
+                                    <i class="fas fa-lock"></i> <strong>Password-Protected PDF?</strong><br>
+                                    If your PDF has a password:<br>
+                                    1. Open the PDF with password<br>
+                                    2. Print to PDF (save as new PDF)<br>
+                                    3. Upload the new unprotected PDF
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <strong>🏦 Other Banks:</strong>
                                 <ol class="small">
                                     <li>Posted Date (YYYY-MM-DD)</li>
@@ -53,6 +68,8 @@
                         <div class="mt-3">
                             <strong>📝 CIMB Example:</strong><br>
                             <code class="small">"19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</code><br>
+                            <strong>� Maybank:</strong><br>
+                            <span class="small">Upload your PDF statement file (e.g., 162263-826614_20250831.pdf)</span><br>
                             <strong>📝 Generic Example:</strong><br>
                             <code class="small">2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,</code>
                         </div>
@@ -107,6 +124,19 @@
                     <form action="{{ route('transactions.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         
+                        <!-- Maybank PDF Warning -->
+                        <div class="alert alert-warning" id="maybank-pdf-warning" style="display: none;">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Important: Maybank PDF Files</h6>
+                            <p class="mb-2">Maybank PDF statements are often password-protected. If you encounter an error:</p>
+                            <ol class="mb-2">
+                                <li><strong>Open</strong> your PDF file and enter the password</li>
+                                <li><strong>Print to PDF</strong> (File → Print → Save as PDF / Microsoft Print to PDF)</li>
+                                <li><strong>Save</strong> without password protection</li>
+                                <li><strong>Upload</strong> the new unprotected PDF file</li>
+                            </ol>
+                            <p class="mb-0 small"><strong>Alternative:</strong> Use online tools like "iLovePDF" or "Smallpdf" to remove PDF password protection.</p>
+                        </div>
+                        
                         <div class="form-group">
                             <label for="bank_id" class="form-label">Select Bank <span class="text-danger">*</span></label>
                             <select name="bank_id" id="bank_id" class="form-control @error('bank_id') is-invalid @enderror" required onchange="updateFormatInfo()">
@@ -124,15 +154,16 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="csv_files" class="form-label">CSV Files <span class="text-danger">*</span></label>
+                            <label for="csv_files" class="form-label">CSV/PDF Files <span class="text-danger">*</span></label>
                             <div class="custom-file">
                                 <input type="file" class="custom-file-input @error('csv_files') is-invalid @enderror" 
-                                       id="csv_files" name="csv_files[]" accept=".csv,.txt" multiple required>
-                                <label class="custom-file-label" for="csv_files">Choose CSV files...</label>
+                                       id="csv_files" name="csv_files[]" accept=".csv,.txt,.pdf" multiple required>
+                                <label class="custom-file-label" for="csv_files">Choose CSV or PDF files...</label>
                             </div>
                             @error('csv_files')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">Maybank: Upload PDF statements | Other banks: Upload CSV files</small>
                         </div>
 
                         <!-- Selected Files List -->
@@ -324,12 +355,20 @@ function updateFormatInfo() {
     const formatInfo = document.getElementById('format-info');
     const selectedBankName = document.getElementById('selected-bank-name');
     const formatDetails = document.getElementById('format-details');
+    const maybankWarning = document.getElementById('maybank-pdf-warning');
     
     if (bankSelect.value) {
         const selectedOption = bankSelect.options[bankSelect.selectedIndex];
         const bankName = selectedOption.getAttribute('data-bank-name');
         
         selectedBankName.textContent = bankName;
+        
+        // Show/hide Maybank PDF warning
+        if (bankName.toLowerCase().includes('maybank')) {
+            maybankWarning.style.display = 'block';
+        } else {
+            maybankWarning.style.display = 'none';
+        }
         
         // Bank-specific format information
         let formatHTML = '';
@@ -344,6 +383,19 @@ function updateFormatInfo() {
                         <li><strong>Credit(RM):</strong> Amount or empty</li>
                     </ol>
                     <small><strong>Example:</strong> "19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</small>
+                `;
+                break;
+            case 'maybank':
+                formatHTML = `
+                    <ol class="mb-2">
+                        <li><strong>Date:</strong> dd/MM/yyyy (e.g., "01/10/2025")</li>
+                        <li><strong>Reference:</strong> Optional reference number</li>
+                        <li><strong>Description:</strong> Transaction description</li>
+                        <li><strong>Withdrawal (RM):</strong> Debit amount or empty/dash</li>
+                        <li><strong>Deposit (RM):</strong> Credit amount or empty/dash</li>
+                        <li><strong>Balance (RM):</strong> Account balance (optional)</li>
+                    </ol>
+                    <small><strong>Example:</strong> "01/10/2025","REF123","Purchase at Grocery Store","45.67","-","2500.00"</small>
                 `;
                 break;
             default:
@@ -381,6 +433,13 @@ function downloadSample() {
 "19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306        SELANGOR     MY|||","46.20","",
 "19-Aug-2025","17-Aug-2025","HEROMARKET KIP MALL BA SPB>B.BANGI    MY|||","71.50","",
 "03-Aug-2025","03-Aug-2025","TRANSFER / TOP-UP THANK YOU-CLICKS|FROM MUHAMMAD YASIR BIN AZMAN|CC July|Payment Desc","","2524.46",`;
+        } else if (bankName.toLowerCase() === 'maybank') {
+            csvContent = `Date,Reference,Description,Withdrawal,Deposit,Balance
+"01/10/2025","TXN001","Purchase at 99 SPEEDMART","45.60","-","2454.40"
+"02/10/2025","TXN002","PETRONAS Fuel Station","60.00","-","2394.40"
+"03/10/2025","TXN003","Salary Deposit","-","2500.00","4894.40"
+"04/10/2025","TXN004","GRAB Payment","25.50","-","4868.90"
+"05/10/2025","TXN005","Online Transfer to Savings","-","1000.00","5868.90"`;
         } else {
             csvContent = `Posted Date,Transaction Date,Transaction Detail,Debit,Credit
 2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,
