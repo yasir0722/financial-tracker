@@ -36,6 +36,7 @@ Route::post('/transactions/recategorize', [TransactionController::class, 'recate
 
 // Spending Type Management routes
 Route::get('/spending-types', [SpendingTypeController::class, 'index'])->name('spending-types.index');
+Route::post('/spending-types', [SpendingTypeController::class, 'store'])->name('spending-types.store');
 Route::get('/spending-types/{spendingType}/edit', [SpendingTypeController::class, 'edit'])->name('spending-types.edit');
 Route::put('/spending-types/{spendingType}', [SpendingTypeController::class, 'update'])->name('spending-types.update');
 Route::post('/spending-types/add-keyword', [SpendingTypeController::class, 'addKeywordFromTransaction'])->name('spending-types.add-keyword');

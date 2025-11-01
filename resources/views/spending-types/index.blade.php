@@ -11,12 +11,6 @@
                     <i class="fas fa-tags"></i> Spending Types Management
                 </h1>
                 <div>
-                    <button type="button" class="btn btn-primary mr-2" data-bs-toggle="modal" data-bs-target="#sortModal">
-                        <i class="fas fa-sort"></i> Sort Order
-                    </button>
-                    <button type="button" class="btn btn-success mr-2" onclick="recategorizeAll()">
-                        <i class="fas fa-sync-alt"></i> Re-categorize All
-                    </button>
                     <a href="{{ route('dashboard') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Back to Dashboard
                     </a>
@@ -43,10 +37,17 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Manage Keywords:</strong> Keywords are used to automatically categorize transactions during CSV import. 
-                        Add relevant words or phrases that commonly appear in transaction descriptions for each category.
+
+                    <div class="d-flex justify-content-end mb-3">
+                        <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#addSpendingTypeModal">
+                            <i class="fas fa-plus"></i> Add New Type
+                        </button>
+                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#sortModal">
+                            <i class="fas fa-sort"></i> Sort Order
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="recategorizeAll()">
+                            <i class="fas fa-sync-alt"></i> Re-categorize All
+                        </button>
                     </div>
 
                     <div class="table-responsive">
@@ -140,6 +141,105 @@
                     </ul>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Spending Type Modal -->
+<div class="modal fade" id="addSpendingTypeModal" tabindex="-1" aria-labelledby="addSpendingTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSpendingTypeModalLabel">
+                    <i class="fas fa-plus"></i> Add New Spending Type
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addSpendingTypeForm" method="POST" action="{{ route('spending-types.store') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="code" class="form-label">Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="code" name="code" required>
+                                <small class="form-text text-muted">Unique identifier (lowercase, no spaces)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="keywords" class="form-label">Keywords (comma-separated)</label>
+                        <input type="text" class="form-control" id="keywords" name="keywords" placeholder="e.g., grocery, supermarket, tesco">
+                        <small class="form-text text-muted">Keywords are automatically converted to lowercase</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="badge_class" class="form-label">Badge Color <span class="text-danger">*</span></label>
+                                <select class="form-select" id="badge_class" name="badge_class" required>
+                                    <option value="badge-primary">Primary (Blue)</option>
+                                    <option value="badge-success">Success (Green)</option>
+                                    <option value="badge-info">Info (Cyan)</option>
+                                    <option value="badge-warning">Warning (Yellow)</option>
+                                    <option value="badge-danger">Danger (Red)</option>
+                                    <option value="badge-secondary">Secondary (Gray)</option>
+                                    <option value="badge-dark">Dark (Black)</option>
+                                    <option value="badge-light">Light (White)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="icon" class="form-label">Icon (FontAwesome)</label>
+                                <input type="text" class="form-control" id="icon" name="icon" placeholder="e.g., shopping-cart">
+                                <small class="form-text text-muted">Without 'fa-' prefix</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="sort_order" class="form-label">Sort Order</label>
+                                <input type="number" class="form-control" id="sort_order" name="sort_order" value="{{ ($spendingTypes->max('sort_order') ?? 100) + 10 }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1" checked>
+                            <label class="form-check-label" for="is_active">
+                                Active
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Preview:</strong>
+                        <span id="badgePreview" class="badge badge-primary ms-2">
+                            <i class="fas fa-tag"></i> New Type
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Spending Type
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -253,6 +353,25 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSortOrderValues();
         }
     });
+    
+    // Badge preview functionality
+    const badgeClassSelect = document.getElementById('badge_class');
+    const iconInput = document.getElementById('icon');
+    const nameInput = document.getElementById('name');
+    const badgePreview = document.getElementById('badgePreview');
+    
+    function updateBadgePreview() {
+        const badgeClass = badgeClassSelect.value.replace('badge-', 'bg-');
+        const icon = iconInput.value.trim();
+        const name = nameInput.value.trim() || 'New Type';
+        
+        badgePreview.className = `badge ${badgeClass} ms-2`;
+        badgePreview.innerHTML = (icon ? `<i class="fas fa-${icon}"></i> ` : '<i class="fas fa-tag"></i> ') + name;
+    }
+    
+    badgeClassSelect.addEventListener('change', updateBadgePreview);
+    iconInput.addEventListener('input', updateBadgePreview);
+    nameInput.addEventListener('input', updateBadgePreview);
 });
 
 // Update sort order input values based on current position

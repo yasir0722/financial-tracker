@@ -17,6 +17,41 @@ class SpendingTypeController extends Controller
     }
 
     /**
+     * Store a newly created spending type in storage
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:50|unique:ref_spending_types,code',
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:255',
+            'keywords' => 'nullable|string',
+            'badge_class' => 'required|string|max:50',
+            'icon' => 'nullable|string|max:50',
+            'is_active' => 'boolean',
+            'sort_order' => 'integer|min:0',
+        ]);
+
+        // Convert keywords string to array and lowercase
+        if (!empty($validated['keywords'])) {
+            $keywordsArray = array_map('trim', explode(',', $validated['keywords']));
+            $keywordsArray = array_map('strtolower', $keywordsArray);
+            $validated['keywords'] = array_filter($keywordsArray);
+        } else {
+            $validated['keywords'] = [];
+        }
+
+        // Ensure is_active is set
+        $validated['is_active'] = $request->has('is_active') ? true : false;
+
+        // Create the spending type
+        RefSpendingType::create($validated);
+
+        return redirect()->route('spending-types.index')
+            ->with('success', 'Spending type created successfully!');
+    }
+
+    /**
      * Show the form for editing the specified spending type
      */
     public function edit(RefSpendingType $spendingType)
