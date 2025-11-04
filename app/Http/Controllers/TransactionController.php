@@ -70,94 +70,72 @@ class TransactionController extends Controller
     }
 
     /**
-     * Generate quick date selection options
+     * Generate quick date selection options organized in 3 sections
      */
     private function generateQuickDates(Request $request)
     {
         $currentDate = Carbon::now();
-        $quickDates = [];
+        $quickDates = [
+            'years' => [],      // Section 1: Years (2025, 2024, 2023)
+            'periods' => [],    // Section 2: Last X days (30, 60, 90)
+            'months' => []      // Section 3: 12 months (Jan - Dec)
+        ];
 
-        // Quick period buttons first
+        // ===== SECTION 1: YEARLY BUTTONS (2025, 2024, 2023) =====
+        for ($i = 0; $i < 3; $i++) {
+            $yearDate = $currentDate->copy()->subYears($i);
+            $yearStart = $yearDate->copy()->startOfYear()->format('Y-m-d');
+            $yearEnd = $yearDate->copy()->endOfYear()->format('Y-m-d');
+            $yearLabel = $yearDate->format('Y');
+            $isActive = ($request->get('date_from') == $yearStart && $request->get('date_to') == $yearEnd);
+
+            $quickDates['years'][] = [
+                'label' => $yearLabel,
+                'start_date' => $yearStart,
+                'end_date' => $yearEnd,
+                'is_active' => $isActive,
+                'button_class' => $isActive ? 'btn-warning' : 'btn-outline-warning',
+                'icon' => 'fas fa-calendar-year'
+            ];
+        }
+
+        // ===== SECTION 2: PERIOD BUTTONS (Last 30, 60, 90 days) =====
         $todayEnd = $currentDate->format('Y-m-d');
-
-        // Last 30 Days
-        $last30Start = $currentDate->copy()->subDays(30)->format('Y-m-d');
-        $isLast30Active = ($request->get('date_from') == $last30Start && $request->get('date_to') == $todayEnd);
-
-        $quickDates[] = [
-            'label' => 'Last 30 Days',
-            'start_date' => $last30Start,
-            'end_date' => $todayEnd,
-            'is_active' => $isLast30Active,
-            'button_class' => $isLast30Active ? 'btn-success' : 'btn-outline-success',
-            'icon' => 'fas fa-clock'
+        $periods = [
+            ['days' => 30, 'label' => 'Last 30 Days', 'color' => 'success'],
+            ['days' => 60, 'label' => 'Last 60 Days', 'color' => 'info'],
+            ['days' => 90, 'label' => 'Last 90 Days', 'color' => 'primary']
         ];
 
-        // Last 90 Days
-        $last90Start = $currentDate->copy()->subDays(90)->format('Y-m-d');
-        $isLast90Active = ($request->get('date_from') == $last90Start && $request->get('date_to') == $todayEnd);
+        foreach ($periods as $period) {
+            $periodStart = $currentDate->copy()->subDays($period['days'])->format('Y-m-d');
+            $isActive = ($request->get('date_from') == $periodStart && $request->get('date_to') == $todayEnd);
 
-        $quickDates[] = [
-            'label' => 'Last 90 Days',
-            'start_date' => $last90Start,
-            'end_date' => $todayEnd,
-            'is_active' => $isLast90Active,
-            'button_class' => $isLast90Active ? 'btn-info' : 'btn-outline-info',
-            'icon' => 'fas fa-history'
-        ];
+            $quickDates['periods'][] = [
+                'label' => $period['label'],
+                'start_date' => $periodStart,
+                'end_date' => $todayEnd,
+                'is_active' => $isActive,
+                'button_class' => $isActive ? "btn-{$period['color']}" : "btn-outline-{$period['color']}",
+                'icon' => 'fas fa-clock'
+            ];
+        }
 
-        // This Year (Current year)
-        $thisYearStart = $currentDate->copy()->startOfYear()->format('Y-m-d');
-        $thisYearEnd = $currentDate->copy()->endOfYear()->format('Y-m-d');
-        $isThisYearActive = ($request->get('date_from') == $thisYearStart && $request->get('date_to') == $thisYearEnd);
-
-        $quickDates[] = [
-            'label' => $currentDate->format('Y'),
-            'start_date' => $thisYearStart,
-            'end_date' => $thisYearEnd,
-            'is_active' => $isThisYearActive,
-            'button_class' => $isThisYearActive ? 'btn-warning' : 'btn-outline-warning',
-            'icon' => 'fas fa-calendar-year'
-        ];
-
-        // Last Year (Previous calendar year)
-        $lastYear = $currentDate->copy()->subYear();
-        $lastYearStart = $lastYear->copy()->startOfYear()->format('Y-m-d');
-        $lastYearEnd = $lastYear->copy()->endOfYear()->format('Y-m-d');
-        $isLastYearActive = ($request->get('date_from') == $lastYearStart && $request->get('date_to') == $lastYearEnd);
-
-        $quickDates[] = [
-            'label' => $lastYear->format('Y'),
-            'start_date' => $lastYearStart,
-            'end_date' => $lastYearEnd,
-            'is_active' => $isLastYearActive,
-            'button_class' => $isLastYearActive ? 'btn-secondary' : 'btn-outline-secondary',
-            'icon' => 'fas fa-calendar-year'
-        ];
-
-        // Monthly buttons (last 6 months) - only show unique months
-        $addedMonths = [];
-        for ($i = 0; $i < 6; $i++) {
-            $monthDate = $currentDate->copy()->subMonths($i);
-            $monthKey = $monthDate->format('Y-m'); // Use year-month as unique key
-            
-            // Skip if this month was already added
-            if (in_array($monthKey, $addedMonths)) {
-                continue;
-            }
-            
-            $addedMonths[] = $monthKey;
+        // ===== SECTION 3: MONTHLY BUTTONS (12 months: Jan - Dec of current year) =====
+        $currentYear = $currentDate->year;
+        for ($month = 1; $month <= 12; $month++) {
+            $monthDate = Carbon::create($currentYear, $month, 1);
             $monthStart = $monthDate->copy()->startOfMonth()->format('Y-m-d');
             $monthEnd = $monthDate->copy()->endOfMonth()->format('Y-m-d');
-            $monthName = $monthDate->format('M Y');
+            $monthLabel = $monthDate->format('M');
             $isActive = ($request->get('date_from') == $monthStart && $request->get('date_to') == $monthEnd);
 
-            $quickDates[] = [
-                'label' => $monthName,
+            $quickDates['months'][] = [
+                'label' => $monthLabel,
                 'start_date' => $monthStart,
                 'end_date' => $monthEnd,
                 'is_active' => $isActive,
-                'button_class' => $isActive ? 'btn-primary' : 'btn-outline-primary',
+                'button_class' => $isActive ? 'btn-secondary' : 'btn-outline-secondary',
                 'icon' => 'fas fa-calendar'
             ];
         }
@@ -931,10 +909,8 @@ class TransactionController extends Controller
                 'BUTIR URUSNIAGA',
                 'JUMLAH URUSNIAGA',
                 'BAKI PENYATA',
-                '進支日期',
-                '進支項說明',
-                '银碼',
-                '結單存餘'
+                'ACCOUNT',
+                'NUMBER'
             ];
             
             $i = 0;
@@ -949,10 +925,17 @@ class TransactionController extends Controller
                 
                 // Skip header/footer lines
                 $shouldSkip = false;
-                foreach ($skipPatterns as $pattern) {
-                    if (stripos($line, $pattern) !== false) {
-                        $shouldSkip = true;
-                        break;
+                
+                // Check if line contains Chinese characters (skip all Chinese text)
+                if (preg_match('/[\x{4E00}-\x{9FFF}\x{3400}-\x{4DBF}\x{20000}-\x{2A6DF}\x{2A700}-\x{2B73F}\x{2B740}-\x{2B81F}\x{2B820}-\x{2CEAF}\x{F900}-\x{FAFF}\x{2F800}-\x{2FA1F}]/u', $line)) {
+                    $shouldSkip = true;
+                } else {
+                    // Check against text patterns
+                    foreach ($skipPatterns as $pattern) {
+                        if (stripos($line, $pattern) !== false) {
+                            $shouldSkip = true;
+                            break;
+                        }
                     }
                 }
                 
@@ -970,34 +953,45 @@ class TransactionController extends Controller
                     $sign = $matches[4];
                     $balance = str_replace(',', '', $matches[5]);
                     
-                    // Collect multi-line description details
+                    // Collect multi-line description details (up to 3 continuation lines)
                     $descriptionLines = [$description];
                     $j = $i + 1;
+                    $linesCollected = 0;
+                    $maxDescriptionLines = 3; // Maybank typically has up to 3 description rows
                     
                     // Look ahead for continuation lines (lines that don't start with a date)
-                    while ($j < count($lines)) {
+                    while ($j < count($lines) && $linesCollected < $maxDescriptionLines) {
                         $nextLine = trim($lines[$j]);
                         
-                        // Stop if next line is empty or a new transaction (starts with date)
-                        if (empty($nextLine) || preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine)) {
+                        // Stop if we hit a new transaction (starts with date pattern)
+                        if (preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine)) {
                             break;
                         }
                         
-                        // Skip header/footer patterns in continuation lines
+                        // Check if this line is a header/footer pattern
                         $skipContinuation = false;
-                        foreach ($skipPatterns as $pattern) {
-                            if (stripos($nextLine, $pattern) !== false) {
-                                $skipContinuation = true;
-                                break;
+                        
+                        // Check if line contains Chinese characters (skip all Chinese text)
+                        if (preg_match('/[\x{4E00}-\x{9FFF}\x{3400}-\x{4DBF}\x{20000}-\x{2A6DF}\x{2A700}-\x{2B73F}\x{2B740}-\x{2B81F}\x{2B820}-\x{2CEAF}\x{F900}-\x{FAFF}\x{2F800}-\x{2FA1F}]/u', $nextLine)) {
+                            $skipContinuation = true;
+                        } else {
+                            // Check against text patterns
+                            foreach ($skipPatterns as $pattern) {
+                                if (stripos($nextLine, $pattern) !== false) {
+                                    $skipContinuation = true;
+                                    break;
+                                }
                             }
                         }
                         
-                        if (!$skipContinuation) {
+                        // If it's not a header/footer and not empty, add it
+                        if (!$skipContinuation && !empty($nextLine)) {
                             // Add continuation line, removing asterisks and extra spaces
                             $cleanLine = trim(str_replace('*', '', $nextLine));
                             if (!empty($cleanLine)) {
                                 $descriptionLines[] = $cleanLine;
                             }
+                            $linesCollected++;
                         }
                         
                         $j++;

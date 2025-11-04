@@ -70,27 +70,39 @@
                                        class="form-control" value="{{ request('search') }}" 
                                        placeholder="Search transaction details...">
                             </div>
-                            <div class="col-md-2 pt-3 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary mr-2">Filter</button>
-                                <a href="{{ route('transactions.index') }}" class="btn btn-secondary">Clear</a>
-                            </div>
-                        </div>
-
-                        <!-- Quick Date Shortcuts -->
-                        <div class="row mt-3 pt-3 border-top">
-                            <div class="col-12">
-                                <label class="form-label text-muted mb-2">
-                                    <i class="fas fa-calendar-alt"></i> Quick Date Selection:
-                                </label>
+                            <div class="col-md-9 mt-4">                               
+                                <!-- Years and Periods side by side -->
                                 <div class="d-flex flex-wrap">
-                                    @foreach($quickDates as $quickDate)
+                                    @foreach($quickDates['years'] as $quickDate)
                                         <button type="button" 
-                                                class="btn btn-sm {{ $quickDate['button_class'] }} date-shortcut me-2 mb-2"
+                                                class="btn btn-sm {{ $quickDate['button_class'] }} date-shortcut me-2"
+                                                onclick="selectDateRange('{{ $quickDate['start_date'] }}', '{{ $quickDate['end_date'] }}')">
+                                            <i class="{{ $quickDate['icon'] }}"></i> {{ $quickDate['label'] }}
+                                        </button>
+                                    @endforeach
+                                    @foreach($quickDates['periods'] as $quickDate)
+                                        <button type="button" 
+                                                class="btn btn-sm {{ $quickDate['button_class'] }} date-shortcut me-2"
                                                 onclick="selectDateRange('{{ $quickDate['start_date'] }}', '{{ $quickDate['end_date'] }}')">
                                             <i class="{{ $quickDate['icon'] }}"></i> {{ $quickDate['label'] }}
                                         </button>
                                     @endforeach
                                 </div>
+
+                                <!-- 12 Months (Jan - Dec) -->
+                                <div class="d-flex flex-wrap">
+                                    @foreach($quickDates['months'] as $quickDate)
+                                        <button type="button" 
+                                                class="btn btn-sm {{ $quickDate['button_class'] }} date-shortcut me-2"
+                                                onclick="selectDateRange('{{ $quickDate['start_date'] }}', '{{ $quickDate['end_date'] }}')">
+                                            <i class="{{ $quickDate['icon'] }}"></i> {{ $quickDate['label'] }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="col-md-3 mt-4 d-flex align-items-start justify-content-end">
+                                <button type="submit" class="px-4 btn btn-primary me-2">Filter</button>
+                                <a href="{{ route('transactions.index') }}" class="px-4 btn btn-secondary">Clear</a>
                             </div>
                         </div>
                     </form>
