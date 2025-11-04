@@ -291,7 +291,7 @@ class TransactionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'csv_files' => 'required|array|max:20',
-            'csv_files.*' => 'file|mimes:csv,txt,pdf|max:5120', // Increased to 5MB for PDF files
+            'csv_files.*' => 'file|mimes:csv,txt,pdf|max:102400', // 100MB per file
             'bank_id' => 'required|exists:banks,id'
         ]);
 
@@ -433,6 +433,9 @@ class TransactionController extends Controller
             switch (strtolower($bank->name)) {
                 case 'cimb bank':
                     return $this->parseCimbFormat($row, $rowNumber);
+
+                case 'cimb bank cc':
+                    return $this->parseCimbCCFormat($row, $rowNumber);
                     
                 case 'maybank':
                     return $this->parseMaybankFormat($row, $rowNumber);
@@ -460,7 +463,7 @@ class TransactionController extends Controller
      * Parse CIMB Bank CSV format
      * Format: Posting Date, Transaction Date, Transaction Details, Debit(RM), Credit(RM)
      */
-    private function parseCimbFormat($row, $rowNumber)
+    private function parseCimbCCFormat($row, $rowNumber)
     {
         $result = [
             'posted_date' => null,
@@ -486,6 +489,54 @@ class TransactionController extends Controller
             
             $result['debit'] = !empty($debitStr) ? floatval(str_replace(',', '', $debitStr)) : 0;
             $result['credit'] = !empty($creditStr) ? floatval(str_replace(',', '', $creditStr)) : 0;
+
+            // Auto-detect spending type (credit transactions will be overridden to Income)
+            $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail'], $result['credit']);
+
+            if ($result['debit'] == 0 && $result['credit'] == 0) {
+                $result['error'] = "Row {$rowNumber}: No debit or credit amount";
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            $result['error'] = "Row {$rowNumber}: Error parsing CIMB CC format - " . $e->getMessage();
+            return $result;
+        }
+    }
+
+        private function parseCimbFormat($row, $rowNumber)
+    {
+        $result = [
+            'posted_date' => null,
+            'transaction_date' => null,
+            'transaction_detail' => null,
+            'debit' => 0,
+            'credit' => 0,
+            'spending_type_id' => null,
+            'error' => null
+        ];
+
+        try {
+            // New CIMB format: Date, Transaction Details, Money In, Money Out, Balance
+            // Date format: dd-MMM-yyyy (e.g., "30-Sep-2025")
+            $result['posted_date'] = Carbon::createFromFormat('d-M-Y', trim($row[0], '"'))->format('Y-m-d');
+            $result['transaction_date'] = Carbon::createFromFormat('d-M-Y', trim($row[0], '"'))->format('Y-m-d');
+            
+            // Clean transaction details
+            $result['transaction_detail'] = trim($row[1], '"');
+            
+            // Parse amounts - Money In (Credit) and Money Out (Debit)
+            // Format: "MYR 0.19" or "" (empty)
+            $moneyInStr = trim($row[2], '"');
+            $moneyOutStr = trim($row[3], '"');
+            
+            // Remove "MYR" prefix, currency symbols, commas, and spaces
+            $moneyInStr = preg_replace('/[^0-9.-]/', '', $moneyInStr);
+            $moneyOutStr = preg_replace('/[^0-9.-]/', '', $moneyOutStr);
+            
+            // Money Out = Debit, Money In = Credit
+            $result['debit'] = !empty($moneyOutStr) ? floatval($moneyOutStr) : 0;
+            $result['credit'] = !empty($moneyInStr) ? floatval($moneyInStr) : 0;
 
             // Auto-detect spending type (credit transactions will be overridden to Income)
             $result['spending_type_id'] = $this->detectSpendingTypeId($result['transaction_detail'], $result['credit']);

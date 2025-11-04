@@ -29,12 +29,22 @@ return new class extends Migration
         // Insert default spending types
         DB::table('ref_spending_types')->insert([
             [
+                'code' => 'food',
+                'name' => 'Food',
+                'description' => 'Food, restaurants, and dining',
+                'badge_class' => 'badge-success',
+                'icon' => 'fas fa-utensils',
+                'sort_order' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'code' => 'groceries',
-                'name' => 'Groceries & Food',
-                'description' => 'Food, groceries, restaurants, and dining',
+                'name' => 'Groceries',
+                'description' => 'Groceries',
                 'badge_class' => 'badge-success',
                 'icon' => 'fas fa-shopping-cart',
-                'sort_order' => 1,
+                'sort_order' => 2,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -44,7 +54,7 @@ return new class extends Migration
                 'description' => 'Electricity, water, internet, phone bills',
                 'badge_class' => 'badge-warning',
                 'icon' => 'fas fa-file-invoice-dollar',
-                'sort_order' => 2,
+                'sort_order' => 3,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -54,7 +64,7 @@ return new class extends Migration
                 'description' => 'Petrol, gas, and vehicle fuel',
                 'badge_class' => 'badge-info',
                 'icon' => 'fas fa-gas-pump',
-                'sort_order' => 3,
+                'sort_order' => 4,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -64,7 +74,7 @@ return new class extends Migration
                 'description' => 'Hospital, clinic, pharmacy, medical expenses',
                 'badge_class' => 'badge-danger',
                 'icon' => 'fas fa-heartbeat',
-                'sort_order' => 4,
+                'sort_order' => 5,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -74,7 +84,7 @@ return new class extends Migration
                 'description' => 'Taxi, bus, train, parking, tolls',
                 'badge_class' => 'badge-primary',
                 'icon' => 'fas fa-car',
-                'sort_order' => 5,
+                'sort_order' => 6,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -84,7 +94,7 @@ return new class extends Migration
                 'description' => 'Online shopping, retail stores, purchases',
                 'badge_class' => 'badge-secondary',
                 'icon' => 'fas fa-shopping-bag',
-                'sort_order' => 6,
+                'sort_order' => 7,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -94,7 +104,7 @@ return new class extends Migration
                 'description' => 'Movies, games, music, streaming services',
                 'badge_class' => 'badge-dark',
                 'icon' => 'fas fa-film',
-                'sort_order' => 7,
+                'sort_order' => 8,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -104,7 +114,7 @@ return new class extends Migration
                 'description' => 'Money transfers, banking fees, ATM',
                 'badge_class' => 'badge-light',
                 'icon' => 'fas fa-exchange-alt',
-                'sort_order' => 8,
+                'sort_order' => 9,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -114,7 +124,7 @@ return new class extends Migration
                 'description' => 'Salary, bonuses, dividends, refunds',
                 'badge_class' => 'badge-success',
                 'icon' => 'fas fa-hand-holding-usd',
-                'sort_order' => 9,
+                'sort_order' => 10,
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -124,7 +134,7 @@ return new class extends Migration
                 'description' => 'Miscellaneous expenses not categorized',
                 'badge_class' => 'badge-secondary',
                 'icon' => 'fas fa-ellipsis-h',
-                'sort_order' => 10,
+                'sort_order' => 11,
                 'created_at' => now(),
                 'updated_at' => now()
             ]

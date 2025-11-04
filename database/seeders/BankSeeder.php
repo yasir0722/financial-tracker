@@ -13,11 +13,6 @@ class BankSeeder extends Seeder
      */
     public function run(): void
     {
-        // Update existing banks to have type = true
-        DB::table('banks')->whereIn('name', [
-            'Bank Islam', 'Maybank', 'CIMB Bank', 'Public Bank'
-        ])->update(['type' => true]);
-
         // Regular Banks (type = true) - Insert if not exists
         $banks = [
             ['name' => 'Bank Islam', 'type' => true],
@@ -25,6 +20,7 @@ class BankSeeder extends Seeder
             ['name' => 'CIMB Bank', 'type' => true],
             ['name' => 'Public Bank', 'type' => true],
             ['name' => 'Bank Rakyat', 'type' => true],
+            ['name' => 'CIMB Bank CC', 'type' => true],
         ];
 
         // Other Financial Institutions (type = false)
