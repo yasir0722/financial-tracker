@@ -37,7 +37,7 @@ return new class extends Migration
         ]);
 
         DB::table('ref_spending_types')->where('code', 'transportation')->update([
-            'keywords' => json_encode(['taxi', 'bus', 'train', 'mrt', 'lrt', 'grab', 'uber', 'transport', 'tol', 'parking', 'touch n go', 'tng'])
+            'keywords' => json_encode(['taxi', 'bus', 'train', 'mrt', 'lrt', 'grab', 'uber', 'transport', 'tol', 'parking', 'leading', 'touch n go', 'tng'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'shopping')->update([

@@ -14,10 +14,6 @@ return new class extends Migration
         Schema::table('transactions', function (Blueprint $table) {
             // Add composite index to improve performance and help prevent duplicates
             $table->index(['posted_date', 'transaction_date', 'bank_id'], 'idx_transactions_duplicate_check');
-            
-            // Optional: Add unique constraint (uncomment if you want strict uniqueness)
-            // Note: This might cause issues if banks have legitimate duplicate transactions
-            // $table->unique(['posted_date', 'transaction_date', 'transaction_detail', 'bank_id'], 'unique_transaction');
         });
     }
 

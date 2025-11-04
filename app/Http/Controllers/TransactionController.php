@@ -902,21 +902,61 @@ class TransactionController extends Controller
             // Extract transactions from PDF text
             $lines = explode("\n", $text);
             
-            // Maybank format: DD/MM/YY Description (multi-line) Amount(+/-) Balance
-            // Line 1: 26/09/25IBK FUND TFR TO A/C     598.00+  767.32
-            // Line 2:    CIK UMMU RAFIATUL A*
-            // Line 3:    DUITNOW QR-
+            // Skip lines that are page headers/footers
+            $skipPatterns = [
+                'ENTRY DATE',
+                'Dataran Maybank',
+                'jalan',
+                'seksyen',
+                'bandar',
+                'selangor',
+                'yasir bin azman',
+                'IBS BANDAR BARU BANGI',
+                'TRANSACTION DESCRIPTION',
+                'TRANSACTION AMOUNT',
+                'STATEMENT BALANCE',
+                'BEGINNING BALANCE',
+                'Maybank Islamic Berhad',
+                'MUKA/',
+                'PAGE :',
+                'TARIKH PENYATA',
+                'STATEMENT DATE',
+                'NOMBOR AKAUN',
+                'ACCOUNT NUMBER',
+                'PROTECTED BY PIDM',
+                'SAVINGS ACCOUNT-I',
+                'URUSNIAGA AKAUN',
+                'ACCOUNT TRANSACTIONS',
+                'TARIKH MASUK',
+                'BUTIR URUSNIAGA',
+                'JUMLAH URUSNIAGA',
+                'BAKI PENYATA',
+                '進支日期',
+                '進支項說明',
+                '银碼',
+                '結單存餘'
+            ];
             
             $i = 0;
             while ($i < count($lines)) {
                 $line = trim($lines[$i]);
                 
-                // Skip empty lines and header lines
-                if (empty($line) || 
-                    strpos($line, 'ENTRY DATE') !== false || 
-                    strpos($line, 'TRANSACTION DESCRIPTION') !== false ||
-                    strpos($line, 'BEGINNING BALANCE') !== false ||
-                    strpos($line, 'STATEMENT BALANCE') !== false) {
+                // Skip empty lines
+                if (empty($line)) {
+                    $i++;
+                    continue;
+                }
+                
+                // Skip header/footer lines
+                $shouldSkip = false;
+                foreach ($skipPatterns as $pattern) {
+                    if (stripos($line, $pattern) !== false) {
+                        $shouldSkip = true;
+                        break;
+                    }
+                }
+                
+                if ($shouldSkip) {
                     $i++;
                     continue;
                 }
@@ -938,19 +978,28 @@ class TransactionController extends Controller
                     while ($j < count($lines)) {
                         $nextLine = trim($lines[$j]);
                         
-                        // Stop if next line is empty, a new transaction (starts with date), or a header
-                        if (empty($nextLine) || 
-                            preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine) ||
-                            strpos($nextLine, 'Maybank Islamic') !== false ||
-                            strpos($nextLine, 'MUKA/') !== false) {
+                        // Stop if next line is empty or a new transaction (starts with date)
+                        if (empty($nextLine) || preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine)) {
                             break;
                         }
                         
-                        // Add continuation line, removing asterisks and extra spaces
-                        $cleanLine = trim(str_replace('*', '', $nextLine));
-                        if (!empty($cleanLine)) {
-                            $descriptionLines[] = $cleanLine;
+                        // Skip header/footer patterns in continuation lines
+                        $skipContinuation = false;
+                        foreach ($skipPatterns as $pattern) {
+                            if (stripos($nextLine, $pattern) !== false) {
+                                $skipContinuation = true;
+                                break;
+                            }
                         }
+                        
+                        if (!$skipContinuation) {
+                            // Add continuation line, removing asterisks and extra spaces
+                            $cleanLine = trim(str_replace('*', '', $nextLine));
+                            if (!empty($cleanLine)) {
+                                $descriptionLines[] = $cleanLine;
+                            }
+                        }
+                        
                         $j++;
                     }
                     
