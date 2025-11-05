@@ -203,6 +203,7 @@
                                         </a>
                                     </th>
                                     <th class="text-right">Balance Impact</th>
+                                    <th>Type</th>
                                     <th width="100">Actions</th>
                                 </tr>
                             </thead>
@@ -246,13 +247,26 @@
                                         ${{ number_format($transaction->credit - $transaction->debit, 2) }}
                                     </td>
                                     <td>
+                                        <select class="form-select form-select-sm spending-type-dropdown" 
+                                                data-transaction-id="{{ $transaction->id }}"
+                                                style="min-width: 120px;">
+                                            <option value="">- Select Type -</option>
+                                            @foreach($spendingTypes as $id => $name)
+                                                <option value="{{ $id }}" 
+                                                    {{ $transaction->spending_type_id == $id ? 'selected' : '' }}>
+                                                    {{ $name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('transactions.edit', $transaction) }}" 
                                                class="btn btn-sm btn-outline-primary" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <form action="{{ route('transactions.destroy', $transaction) }}" 
-                                                  method="POST" class="d-inline"
+                                                  method="POST" 
                                                   onsubmit="return confirm('Are you sure you want to delete this transaction?')">
                                                 @csrf
                                                 @method('DELETE')
@@ -331,6 +345,39 @@ document.addEventListener('DOMContentLoaded', function() {
             margin-right: 0.25rem;
         }
         
+        /* Button group styling - fix borders */
+        .btn-group {
+            display: inline-flex;
+        }
+        
+        .btn-group form {
+            display: contents;
+        }
+        
+        .btn-group .btn {
+            border-radius: 0;
+        }
+        
+        .btn-group .btn:first-child {
+            border-top-left-radius: 0.2rem;
+            border-bottom-left-radius: 0.2rem;
+            border-right: 1px solid #6c757d !important;
+        }
+        
+        .btn-group .btn:last-child,
+        .btn-group form:last-child .btn {
+            border-top-right-radius: 0.2rem;
+            border-bottom-right-radius: 0.2rem;
+            border-left: 1px solid #6c757d !important;
+        }
+        
+        .btn-group .btn + .btn,
+        .btn-group .btn + form .btn,
+        .btn-group form + .btn,
+        .btn-group form + form .btn {
+            margin-left: -1px;
+        }
+        
         /* Bank badge styling */
         .bank-badge {
             background-color: #007bff !important;
@@ -353,6 +400,11 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 0.2rem 0.4rem !important;
             border-radius: 0.2rem !important;
             font-weight: 500 !important;
+        }
+
+        .badge-primary {
+            background-color: #007bff !important;
+            color: #ffffff !important;
         }
         
         .badge-success {
@@ -484,6 +536,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     `;
     document.head.appendChild(style);
+    
+    // Handle spending type dropdown change
+    document.querySelectorAll('.spending-type-dropdown').forEach(function(dropdown) {
+        dropdown.addEventListener('change', function() {
+            const transactionId = this.getAttribute('data-transaction-id');
+            const spendingTypeId = this.value;
+            const originalValue = this.querySelector('option[selected]')?.value || '';
+            
+            // Show loading state
+            this.style.opacity = '0.5';
+            this.disabled = true;
+            
+            // Send AJAX request to update spending type
+            fetch(`/transactions/${transactionId}/update-spending-type`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    spending_type_id: spendingTypeId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the selected attribute
+                    this.querySelectorAll('option').forEach(opt => opt.removeAttribute('selected'));
+                    if (spendingTypeId) {
+                        this.querySelector(`option[value="${spendingTypeId}"]`).setAttribute('selected', 'selected');
+                    }
+                    
+                    // Show success feedback
+                    this.style.opacity = '1';
+                    this.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        this.style.backgroundColor = '';
+                    }, 1000);
+                } else {
+                    alert('Error updating spending type: ' + (data.message || 'Unknown error'));
+                    this.value = originalValue;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating spending type. Please try again.');
+                this.value = originalValue;
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.style.opacity = '1';
+            });
+        });
+    });
 });
 </script>
 @endpush

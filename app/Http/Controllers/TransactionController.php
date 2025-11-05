@@ -910,7 +910,8 @@ class TransactionController extends Controller
                 'JUMLAH URUSNIAGA',
                 'BAKI PENYATA',
                 'ACCOUNT',
-                'NUMBER'
+                'NUMBER',
+                'Perhation / Note',
             ];
             
             $i = 0;
@@ -946,7 +947,9 @@ class TransactionController extends Controller
                 
                 // Maybank Islamic pattern: DD/MM/YY followed by description, amount with +/-, and balance
                 // Match: 02/08/25IBK FUND TFR FR A/C     12.00-  524.02
+                // OR: Just date with description (amount on next line)
                 if (preg_match('/^(\d{2}\/\d{2}\/\d{2})(.+?)\s+([\d,]+\.\d{2})([+-])\s+([\d,]+\.\d{2})/', $line, $matches)) {
+                    // Full transaction line with date, description, amount, and balance
                     $date = $matches[1];
                     $description = trim($matches[2]);
                     $amount = str_replace(',', '', $matches[3]);
@@ -959,12 +962,12 @@ class TransactionController extends Controller
                     $linesCollected = 0;
                     $maxDescriptionLines = 3; // Maybank typically has up to 3 description rows
                     
-                    // Look ahead for continuation lines (lines that don't start with a date)
+                    // Look ahead for continuation lines (lines that don't start with a new transaction)
                     while ($j < count($lines) && $linesCollected < $maxDescriptionLines) {
                         $nextLine = trim($lines[$j]);
                         
-                        // Stop if we hit a new transaction (starts with date pattern)
-                        if (preg_match('/^\d{2}\/\d{2}\/\d{2}/', $nextLine)) {
+                        // Stop if we hit a new transaction (starts with date AND has amount pattern)
+                        if (preg_match('/^\d{2}\/\d{2}\/\d{2}.+\d+\.\d{2}[+-]/', $nextLine)) {
                             break;
                         }
                         
@@ -990,8 +993,8 @@ class TransactionController extends Controller
                             $cleanLine = trim(str_replace('*', '', $nextLine));
                             if (!empty($cleanLine)) {
                                 $descriptionLines[] = $cleanLine;
+                                $linesCollected++;
                             }
-                            $linesCollected++;
                         }
                         
                         $j++;
@@ -1057,5 +1060,38 @@ class TransactionController extends Controller
         }
         
         return $transactions;
+    }
+
+    /**
+     * Update spending type for a transaction via AJAX
+     */
+    public function updateSpendingType(Request $request, Transaction $transaction)
+    {
+        $validated = $request->validate([
+            'spending_type_id' => 'nullable|exists:ref_spending_types,id'
+        ]);
+
+        try {
+            $transaction->update([
+                'spending_type_id' => $validated['spending_type_id']
+            ]);
+
+            $spendingType = $transaction->spendingType;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Spending type updated successfully',
+                'spending_type' => $spendingType ? [
+                    'id' => $spendingType->id,
+                    'name' => $spendingType->name,
+                    'code' => $spendingType->code
+                ] : null
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating spending type: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

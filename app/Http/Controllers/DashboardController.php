@@ -19,12 +19,6 @@ class DashboardController extends Controller
         $totalExpense = Transaction::sum('debit') ?? 0;
         $transactionCount = Transaction::count();
 
-        // Get recent transactions
-        $recentTransactions = Transaction::with('bank')
-            ->orderBy('transaction_date', 'desc')
-            ->take(10)
-            ->get();
-
         // Get balance by bank
         $bankBalances = Bank::select('banks.id', 'banks.name')
             ->selectRaw('COALESCE(SUM(transactions.credit), 0) - COALESCE(SUM(transactions.debit), 0) as balance')
@@ -75,7 +69,6 @@ class DashboardController extends Controller
             'totalIncome', 
             'totalExpense',
             'transactionCount',
-            'recentTransactions',
             'bankBalances',
             'monthlySummary',
             'currentMonthSpending',

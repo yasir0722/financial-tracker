@@ -33,6 +33,7 @@ Route::post('/transactions/import', [TransactionController::class, 'import'])->n
 Route::post('/transactions/suggest-keywords', [TransactionController::class, 'suggestKeywords'])->name('transactions.suggest-keywords');
 Route::post('/transactions/add-keywords', [TransactionController::class, 'addKeywords'])->name('transactions.add-keywords');
 Route::post('/transactions/recategorize', [TransactionController::class, 'recategorizeTransactions'])->name('transactions.recategorize');
+Route::post('/transactions/{transaction}/update-spending-type', [TransactionController::class, 'updateSpendingType'])->name('transactions.update-spending-type');
 
 // Spending Type Management routes
 Route::get('/spending-types', [SpendingTypeController::class, 'index'])->name('spending-types.index');

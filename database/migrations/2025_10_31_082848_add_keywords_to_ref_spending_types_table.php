@@ -17,11 +17,11 @@ return new class extends Migration
 
         // Update existing records with keywords
         DB::table('ref_spending_types')->where('code', 'food')->update([
-            'keywords' => json_encode(['foodpanda', 'grab', 'food', 'restaurant', 'cafe', 'mcdonald', 'kfc', 'pizza', 'eating', 'meal', 'shawarma', 'kenny', 'family', 'fariz', 'richeese', 'sushi', 'noodles', 'zus', 'qr'])
+            'keywords' => json_encode(['foodpanda', 'grab', 'food', 'restaurant', 'restoran', 'cafe', 'mcdonald', 'chicken', 'burger', 'marry', 'jnc', 'kfc', 'pizza', 'eating', 'meal', 'shawarma', 'kenny', 'family', 'fariz', 'shafah', 'nasi', 'fingers', 'cendol', 'richeese', 'sushi', 'noodles', 'zus', 'qr'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'groceries')->update([
-            'keywords' => json_encode(['grocery', 'supermarket', 'market', 'hero', 'tesco', 'giant', 'jaya grocer', 'mydin', 'speedmart', '99', 'aeon'])
+            'keywords' => json_encode(['grocery', 'supermarket', 'market', 'mart', 'pasar', 'hero', 'tesco', 'giant', 'jaya grocer', 'mydin', 'speedmart', '99', 'aeon'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'bills')->update([
@@ -29,15 +29,15 @@ return new class extends Migration
         ]);
 
         DB::table('ref_spending_types')->where('code', 'fuel')->update([
-            'keywords' => json_encode(['petrol', 'fuel', 'gas', 'station', 'shell', 'petronas', 'caltex', 'bhp', 'pss', 'ps'])
+            'keywords' => json_encode(['petrol', 'fuel', 'gas', 'station', 'shell', 'petronas', 'caltex', 'bhp', 'pss', 'ps', 'petron'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'medical')->update([
-            'keywords' => json_encode(['medical', 'hospital', 'clinic', 'doctor', 'pharmacy', 'medicine', 'health', 'dental', 'insurance', 'klinik',])
+            'keywords' => json_encode(['medical', 'hospital', 'clinic', 'doctor', 'pharmacy', 'medicine', 'health', 'dental', 'insurance', 'klinik', 'kk', 'kp'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'transportation')->update([
-            'keywords' => json_encode(['taxi', 'bus', 'train', 'mrt', 'lrt', 'grab', 'uber', 'transport', 'tol', 'parking', 'leading', 'touch n go', 'tng'])
+            'keywords' => json_encode(['taxi', 'bus', 'train', 'mrt', 'lrt', 'grab', 'uber', 'transport', 'tol', 'parking', 'leading', 'touch n go', 'tng', 'ldp', 'zam', 'lhm'])
         ]);
 
         DB::table('ref_spending_types')->where('code', 'shopping')->update([

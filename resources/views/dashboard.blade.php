@@ -241,60 +241,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Recent Transactions -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Transactions</h6>
-                    <a href="{{ route('transactions.index') }}" class="btn btn-primary btn-sm">View All</a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Bank</th>
-                                    <th>Description</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance Impact</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($recentTransactions as $transaction)
-                                <tr>
-                                    <td>{{ $transaction->transaction_date->format('M d, Y') }}</td>
-                                    <td>{{ $transaction->bank->name }}</td>
-                                    <td>{{ Str::limit($transaction->transaction_detail, 50) }}</td>
-                                    <td class="text-danger">
-                                        @if($transaction->debit > 0)
-                                            RM{{ number_format($transaction->debit, 2) }}
-                                        @endif
-                                    </td>
-                                    <td class="text-success">
-                                        @if($transaction->credit > 0)
-                                            RM{{ number_format($transaction->credit, 2) }}
-                                        @endif
-                                    </td>
-                                    <td class="@if($transaction->credit > $transaction->debit) text-success @else text-danger @endif">
-                                        RM{{ number_format($transaction->credit - $transaction->debit, 2) }}
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="6" class="text-center">No transactions found</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 @push('scripts')
