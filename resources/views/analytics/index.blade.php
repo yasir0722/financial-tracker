@@ -10,11 +10,11 @@
     .category-row {
         transition: background-color 0.2s ease;
     }
-    .badge-purple {
+    .bg-purple {
         background-color: #6f42c1;
         color: white;
     }
-    .badge-orange {
+    .bg-orange {
         background-color: #fd7e14;
         color: white;
     }
@@ -73,7 +73,7 @@
     </div>
 
     <!-- All Spending Types Summary -->
-    <div class="row mb-4">
+    <!-- <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow">
                 <div class="card-header py-3">
@@ -178,7 +178,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Detailed Transactions by Category (Expandable) -->
     <div class="row mb-4">
@@ -197,12 +197,42 @@
                                     <th>Category</th>
                                     <th class="text-right">Amount (RM)</th>
                                     <th class="text-right">Transactions</th>
+                                    <th class="text-right" width="15%">% of Income</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($summaryData as $code => $data)
+                                @php
+                                    // Calculate total income for percentage
+                                    $totalIncome = $summaryData['income']['credit'] ?? 0;
+                                    
+                                    // Define display order: income first, then main categories, then others
+                                    $categoryOrder = ['income', 'food', 'groceries', 'fuel', 'transportation', 'shopping', 'entertainment', 'medical', 'bills', 'transfer', 'others'];
+                                    
+                                    // Sort summaryData by custom order
+                                    $orderedData = [];
+                                    foreach ($categoryOrder as $code) {
+                                        if (isset($summaryData[$code])) {
+                                            $orderedData[$code] = $summaryData[$code];
+                                        }
+                                    }
+                                    // Add any remaining categories not in the order list
+                                    foreach ($summaryData as $code => $data) {
+                                        if (!isset($orderedData[$code])) {
+                                            $orderedData[$code] = $data;
+                                        }
+                                    }
+                                @endphp
+                                @foreach($orderedData as $code => $data)
                                     @php
                                         $amount = $code === 'income' ? $data['credit'] : $data['debit'];
+                                        
+                                        // Calculate percentage of income
+                                        if ($code === 'income') {
+                                            $percentOfIncome = 100;
+                                        } else {
+                                            $percentOfIncome = $totalIncome > 0 ? ($amount / $totalIncome * 100) : 0;
+                                        }
+                                        
                                         $badgeColor = match($code) {
                                             'income' => 'success',
                                             'food' => 'warning',
@@ -236,11 +266,16 @@
                                             <td class="text-right">
                                                 <span class="badge badge-pill bg-secondary">{{ $data['count'] }}</span>
                                             </td>
+                                            <td class="text-right">
+                                                <strong class="{{ $code === 'income' ? 'text-success' : 'text-primary' }}">
+                                                    {{ number_format($percentOfIncome, 1) }}%
+                                                </strong>
+                                            </td>
                                         </tr>
                                         
                                         <!-- Child Rows (Transactions) - Expanded by default -->
                                         <tr class="collapse show" id="category-{{ $code }}">
-                                            <td colspan="4" class="p-0">
+                                            <td colspan="5" class="p-0">
                                                 <table class="table table-sm table-striped mb-0" style="background-color: #f8f9fa;">
                                                     <thead style="background-color: #e9ecef;">
                                                         <tr>
