@@ -134,6 +134,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : '' }}" 
+                               href="{{ route('analytics.index') }}">
+                                <i class="fas fa-chart-line"></i>
+                                Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('transactions.*') ? 'active' : '' }}" 
                                href="{{ route('transactions.index') }}">
                                 <i class="fas fa-exchange-alt"></i>
