@@ -123,6 +123,7 @@
                                             'transportation' => 'dark',
                                             'shopping' => 'purple',
                                             'entertainment' => 'orange',
+                                            'investment' => 'info',
                                             default => 'secondary'
                                         };
                                     @endphp
@@ -206,7 +207,7 @@
                                     $totalIncome = $summaryData['income']['credit'] ?? 0;
                                     
                                     // Define display order: income first, then main categories, then others
-                                    $categoryOrder = ['income', 'food', 'groceries', 'fuel', 'transportation', 'shopping', 'entertainment', 'medical', 'bills', 'transfer', 'others'];
+                                    $categoryOrder = ['income', 'food', 'groceries', 'fuel', 'transportation', 'shopping', 'entertainment', 'medical', 'bills', 'investment', 'transfer', 'others'];
                                     
                                     // Sort summaryData by custom order
                                     $orderedData = [];
@@ -243,6 +244,7 @@
                                             'transportation' => 'dark',
                                             'shopping' => 'purple',
                                             'entertainment' => 'orange',
+                                            'investment' => 'info',
                                             default => 'secondary'
                                         };
                                     @endphp

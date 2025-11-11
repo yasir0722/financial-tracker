@@ -56,6 +56,10 @@ return new class extends Migration
             'keywords' => json_encode(['salary', 'bonus', 'dividend', 'interest', 'refund', 'cashback', 'reward'])
         ]);
 
+        DB::table('ref_spending_types')->where('code', 'investment')->update([
+            'keywords' => json_encode(['stocks', 'bonds', 'mutual funds', 'etf', 'dividend', 'capital gains', 'portfolio', 'trading', 'asb', 'tabung haji'])
+        ]);
+
         DB::table('ref_spending_types')->where('code', 'others')->update([
             'keywords' => json_encode([])
         ]);

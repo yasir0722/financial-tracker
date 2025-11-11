@@ -129,12 +129,22 @@ return new class extends Migration
                 'updated_at' => now()
             ],
             [
+                'code' => 'investment',
+                'name' => 'Investment',
+                'description' => 'Stocks, bonds, mutual funds, and other investments',
+                'badge_class' => 'badge-secondary',
+                'icon' => 'fas fa-chart-line',
+                'sort_order' => 11,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'code' => 'others',
                 'name' => 'Others',
                 'description' => 'Miscellaneous expenses not categorized',
                 'badge_class' => 'badge-secondary',
                 'icon' => 'fas fa-ellipsis-h',
-                'sort_order' => 11,
+                'sort_order' => 12,
                 'created_at' => now(),
                 'updated_at' => now()
             ]
