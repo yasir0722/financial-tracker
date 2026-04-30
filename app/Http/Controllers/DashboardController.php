@@ -11,18 +11,24 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $userId = auth()->id();
+        
         // Get summary statistics
-        $totalBalance = Transaction::selectRaw('COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as balance')
+        $totalBalance = Transaction::where('user_id', $userId)
+            ->selectRaw('COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as balance')
             ->value('balance') ?? 0;
 
-        $totalIncome = Transaction::sum('credit') ?? 0;
-        $totalExpense = Transaction::sum('debit') ?? 0;
-        $transactionCount = Transaction::count();
+        $totalIncome = Transaction::where('user_id', $userId)->sum('credit') ?? 0;
+        $totalExpense = Transaction::where('user_id', $userId)->sum('debit') ?? 0;
+        $transactionCount = Transaction::where('user_id', $userId)->count();
 
         // Get balance by bank
         $bankBalances = Bank::select('banks.id', 'banks.name')
             ->selectRaw('COALESCE(SUM(transactions.credit), 0) - COALESCE(SUM(transactions.debit), 0) as balance')
-            ->leftJoin('transactions', 'banks.id', '=', 'transactions.bank_id')
+            ->leftJoin('transactions', function($join) use ($userId) {
+                $join->on('banks.id', '=', 'transactions.bank_id')
+                     ->where('transactions.user_id', '=', $userId);
+            })
             ->groupBy('banks.id', 'banks.name')
             ->get();
 
@@ -33,6 +39,7 @@ class DashboardController extends Controller
                 COALESCE(SUM(credit), 0) as income,
                 COALESCE(SUM(debit), 0) as expense
             ')
+            ->where('user_id', $userId)
             ->where('transaction_date', '>=', now()->subMonths(11)->startOfMonth())
             ->groupBy('month', 'month_name')
             ->orderBy('month', 'asc')
@@ -40,7 +47,7 @@ class DashboardController extends Controller
 
         // Get spending by actual spending types for current month
         // First, get the latest month with transaction data
-        $latestTransactionDate = Transaction::max('transaction_date');
+        $latestTransactionDate = Transaction::where('user_id', $userId)->max('transaction_date');
         $latestMonth = $latestTransactionDate ? \Carbon\Carbon::parse($latestTransactionDate) : now();
         
         $currentMonthSpending = Transaction::select(
@@ -49,6 +56,7 @@ class DashboardController extends Controller
                 DB::raw('COALESCE(SUM(transactions.debit), 0) as total_spent')
             )
             ->leftJoin('ref_spending_types', 'transactions.spending_type_id', '=', 'ref_spending_types.id')
+            ->where('transactions.user_id', $userId)
             ->whereMonth('transaction_date', $latestMonth->month)
             ->whereYear('transaction_date', $latestMonth->year)
             ->where('debit', '>', 0)

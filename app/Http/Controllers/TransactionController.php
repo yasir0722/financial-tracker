@@ -17,7 +17,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with('bank');
+        $query = Transaction::with('bank')->where('user_id', auth()->id());
 
         // Filter by bank
         if ($request->filled('bank_id')) {
@@ -181,6 +181,7 @@ class TransactionController extends Controller
         }
 
         Transaction::create([
+            'user_id' => auth()->id(),
             'posted_date' => $request->posted_date,
             'transaction_date' => $request->transaction_date,
             'transaction_detail' => $request->transaction_detail,
@@ -198,6 +199,11 @@ class TransactionController extends Controller
      */
     public function edit(Transaction $transaction)
     {
+        // Ensure user can only edit their own transactions
+        if ($transaction->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         $banks = Bank::all();
         $spendingTypes = \App\Models\RefSpendingType::getOptions();
         return view('transactions.edit', compact('transaction', 'banks', 'spendingTypes'));
@@ -208,6 +214,11 @@ class TransactionController extends Controller
      */
     public function update(Request $request, Transaction $transaction)
     {
+        // Ensure user can only update their own transactions
+        if ($transaction->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         $validator = Validator::make($request->all(), [
             'posted_date' => 'required|date',
             'transaction_date' => 'required|date',
@@ -248,6 +259,11 @@ class TransactionController extends Controller
      */
     public function destroy(Transaction $transaction)
     {
+        // Ensure user can only delete their own transactions
+        if ($transaction->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         $transaction->delete();
 
         return redirect()->route('transactions.index')
@@ -321,6 +337,7 @@ class TransactionController extends Controller
                             // Use updateOrCreate to prevent duplicates
                             $transaction = Transaction::updateOrCreate([
                                 // Unique identifier fields
+                                'user_id' => auth()->id(),
                                 'posted_date' => $parsedData['posted_date'],
                                 'transaction_date' => $parsedData['transaction_date'],
                                 'transaction_detail' => $parsedData['transaction_detail'],

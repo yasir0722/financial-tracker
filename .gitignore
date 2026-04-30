@@ -18,3 +18,12 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# NPM
+*.log
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.pnp.*
+.yarn-integrity

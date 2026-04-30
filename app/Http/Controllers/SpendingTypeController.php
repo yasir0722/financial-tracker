@@ -108,14 +108,16 @@ class SpendingTypeController extends Controller
      */
     private function recategorizeTransactionsForType($spendingTypeId)
     {
+        $userId = auth()->id();
         $spendingType = RefSpendingType::findOrFail($spendingTypeId);
         $othersType = RefSpendingType::findByCode('others');
         
         // Get transactions that currently have this spending type or 'Others'
-        $transactions = \App\Models\Transaction::whereIn('spending_type_id', [
-            $spendingTypeId, 
-            $othersType?->id
-        ])->get();
+        $transactions = \App\Models\Transaction::where('user_id', $userId)
+            ->whereIn('spending_type_id', [
+                $spendingTypeId, 
+                $othersType?->id
+            ])->get();
 
         $updatedCount = 0;
 
@@ -277,8 +279,9 @@ class SpendingTypeController extends Controller
     public function recategorizeAll()
     {
         try {
+            $userId = auth()->id();
             $count = 0;
-            $transactions = \App\Models\Transaction::all();
+            $transactions = \App\Models\Transaction::where('user_id', $userId)->get();
             
             foreach ($transactions as $transaction) {
                 $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);

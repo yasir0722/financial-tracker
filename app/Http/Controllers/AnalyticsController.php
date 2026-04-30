@@ -15,6 +15,8 @@ class AnalyticsController extends Controller
      */
     public function index(Request $request)
     {
+        $userId = auth()->id();
+        
         // Get selected month or default to current month
         $selectedMonth = $request->get('month', Carbon::now()->format('Y-m'));
         
@@ -24,7 +26,8 @@ class AnalyticsController extends Controller
         $endDate = $date->copy()->endOfMonth();
         
         // Get monthly summary by spending type
-        $monthlySummary = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+        $monthlySummary = Transaction::where('user_id', $userId)
+            ->whereBetween('transaction_date', [$startDate, $endDate])
             ->select('spending_type_id', 
                 DB::raw('SUM(debit) as total_debit'),
                 DB::raw('SUM(credit) as total_credit'),
@@ -43,7 +46,8 @@ class AnalyticsController extends Controller
             $summary = $monthlySummary->get($type->id);
             
             // Get individual transactions for this type
-            $transactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            $transactions = Transaction::where('user_id', $userId)
+                ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->where('spending_type_id', $type->id)
                 ->with('bank') // Load bank relationship
                 ->orderBy('transaction_date', 'desc')
@@ -82,6 +86,7 @@ class AnalyticsController extends Controller
      */
     private function getChartData()
     {
+        $userId = auth()->id();
         $months = [];
         $data = [];
         
@@ -94,7 +99,8 @@ class AnalyticsController extends Controller
             $endDate = $month->copy()->endOfMonth();
             
             // Get spending by type for this month
-            $monthlyData = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            $monthlyData = Transaction::where('user_id', $userId)
+                ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->select('spending_type_id', 
                     DB::raw('SUM(debit) as total_debit'),
                     DB::raw('SUM(credit) as total_credit'))
