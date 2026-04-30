@@ -204,6 +204,7 @@
                                     </th>
                                     <th class="text-right">Balance Impact</th>
                                     <th>Type</th>
+                                    <th class="text-center" width="60">Lock</th>
                                     <th width="100">Actions</th>
                                 </tr>
                             </thead>
@@ -259,6 +260,15 @@
                                             @endforeach
                                         </select>
                                     </td>
+                                    <td class="text-center">
+                                        <button type="button" 
+                                                class="btn btn-sm lock-toggle-btn {{ $transaction->is_locked ? 'btn-warning' : 'btn-outline-secondary' }}" 
+                                                data-transaction-id="{{ $transaction->id }}"
+                                                data-locked="{{ $transaction->is_locked ? 'true' : 'false' }}"
+                                                title="{{ $transaction->is_locked ? 'Click to unlock' : 'Click to lock' }}">
+                                            <i class="fas fa-{{ $transaction->is_locked ? 'lock' : 'lock-open' }}"></i>
+                                        </button>
+                                    </td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('transactions.edit', $transaction) }}" 
@@ -279,7 +289,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="9" class="text-center py-4">
+                                    <td colspan="10" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-3x mb-3"></i>
                                             <h5>No transactions found</h5>
@@ -583,6 +593,68 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 alert('Error updating spending type. Please try again.');
                 this.value = originalValue;
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.style.opacity = '1';
+            });
+        });
+    });
+
+    // Handle lock toggle button click
+    document.querySelectorAll('.lock-toggle-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const transactionId = this.getAttribute('data-transaction-id');
+            const isLocked = this.getAttribute('data-locked') === 'true';
+            const icon = this.querySelector('i');
+            
+            // Show loading state
+            this.style.opacity = '0.5';
+            this.disabled = true;
+            
+            // Send AJAX request to toggle lock
+            fetch(`/transactions/${transactionId}/toggle-lock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button state
+                    const newLockState = data.is_locked;
+                    this.setAttribute('data-locked', newLockState ? 'true' : 'false');
+                    
+                    // Update icon
+                    icon.className = newLockState ? 'fas fa-lock' : 'fas fa-lock-open';
+                    
+                    // Update button style
+                    if (newLockState) {
+                        this.classList.remove('btn-outline-secondary');
+                        this.classList.add('btn-warning');
+                        this.title = 'Click to unlock';
+                    } else {
+                        this.classList.remove('btn-warning');
+                        this.classList.add('btn-outline-secondary');
+                        this.title = 'Click to lock';
+                    }
+                    
+                    // Show success feedback
+                    this.style.opacity = '1';
+                    const originalBg = this.style.backgroundColor;
+                    this.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        this.style.backgroundColor = originalBg;
+                    }, 1000);
+                } else {
+                    alert('Error toggling lock: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error toggling lock. Please try again.');
             })
             .finally(() => {
                 this.disabled = false;

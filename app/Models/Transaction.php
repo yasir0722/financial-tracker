@@ -18,14 +18,16 @@ class Transaction extends Model
         'debit',
         'credit',
         'bank_id',
-        'spending_type_id'
+        'spending_type_id',
+        'is_locked'
     ];
 
     protected $casts = [
         'posted_date' => 'date',
         'transaction_date' => 'date',
         'debit' => 'decimal:2',
-        'credit' => 'decimal:2'
+        'credit' => 'decimal:2',
+        'is_locked' => 'boolean'
     ];
 
     /**

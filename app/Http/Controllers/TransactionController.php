@@ -822,8 +822,8 @@ class TransactionController extends Controller
             'spending_type_id' => 'nullable|exists:ref_spending_types,id'
         ]);
 
-        // Get transactions to re-categorize
-        $query = Transaction::query();
+        // Get transactions to re-categorize (excluding locked transactions)
+        $query = Transaction::where('is_locked', false);
         
         // If specific spending type provided, only re-categorize those transactions
         // or transactions that might match the new keywords
@@ -1108,6 +1108,31 @@ class TransactionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error updating spending type: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle lock status for a transaction via AJAX
+     */
+    public function toggleLock(Request $request, Transaction $transaction)
+    {
+        try {
+            $newLockStatus = !$transaction->is_locked;
+            
+            $transaction->update([
+                'is_locked' => $newLockStatus
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $newLockStatus ? 'Transaction locked successfully' : 'Transaction unlocked successfully',
+                'is_locked' => $newLockStatus
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error toggling lock: ' . $e->getMessage()
             ], 500);
         }
     }

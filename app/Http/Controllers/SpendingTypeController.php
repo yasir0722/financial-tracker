@@ -112,8 +112,9 @@ class SpendingTypeController extends Controller
         $spendingType = RefSpendingType::findOrFail($spendingTypeId);
         $othersType = RefSpendingType::findByCode('others');
         
-        // Get transactions that currently have this spending type or 'Others'
+        // Get transactions that currently have this spending type or 'Others' (excluding locked transactions)
         $transactions = \App\Models\Transaction::where('user_id', $userId)
+            ->where('is_locked', false)
             ->whereIn('spending_type_id', [
                 $spendingTypeId, 
                 $othersType?->id
@@ -281,7 +282,10 @@ class SpendingTypeController extends Controller
         try {
             $userId = auth()->id();
             $count = 0;
-            $transactions = \App\Models\Transaction::where('user_id', $userId)->get();
+            // Only get unlocked transactions
+            $transactions = \App\Models\Transaction::where('user_id', $userId)
+                ->where('is_locked', false)
+                ->get();
             
             foreach ($transactions as $transaction) {
                 $newSpendingTypeId = $this->detectSpendingTypeId($transaction->transaction_detail);
