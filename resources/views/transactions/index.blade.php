@@ -233,7 +233,13 @@
                                     </th>
                                     <th class="text-right">Balance Impact</th>
                                     <th>Type</th>
-                                    <th class="text-center" width="60">Lock</th>
+                                    <th class="text-center" width="60">
+                                        Lock
+                                        <i class="fas fa-circle-info text-muted ms-1" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-placement="top"
+                                           title="Locking a transaction protects it from being changed during recategorization. Locked transactions keep their assigned type even when you run recategorize."></i>
+                                    </th>
                                     <th width="100">Actions</th>
                                 </tr>
                             </thead>
@@ -375,6 +381,11 @@ function selectDateRange(startDate, endDate) {
 
 // Add some CSS for better button spacing and pagination styling
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        new bootstrap.Tooltip(el);
+    });
+
     // Add custom styling
     const style = document.createElement('style');
     style.textContent = `
