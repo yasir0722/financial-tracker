@@ -41,6 +41,11 @@ Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
     Route::post('/transactions/recategorize', [TransactionController::class, 'recategorizeTransactions'])->name('transactions.recategorize');
     Route::post('/transactions/{transaction}/update-spending-type', [TransactionController::class, 'updateSpendingType'])->name('transactions.update-spending-type');
     Route::post('/transactions/{transaction}/toggle-lock', [TransactionController::class, 'toggleLock'])->name('transactions.toggle-lock');
+    
+    // Bulk operations
+    Route::post('/transactions/bulk-lock', [TransactionController::class, 'bulkLock'])->name('transactions.bulk-lock');
+    Route::post('/transactions/bulk-unlock', [TransactionController::class, 'bulkUnlock'])->name('transactions.bulk-unlock');
+    Route::post('/transactions/bulk-update-type', [TransactionController::class, 'bulkUpdateType'])->name('transactions.bulk-update-type');
 
     // Spending Type Management routes
     Route::get('/spending-types', [SpendingTypeController::class, 'index'])->name('spending-types.index');

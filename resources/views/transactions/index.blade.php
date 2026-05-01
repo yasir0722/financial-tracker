@@ -141,10 +141,39 @@
                     </h6>
                 </div>
                 <div class="card-body">
+                    <!-- Bulk Actions Toolbar -->
+                    <div id="bulkActionsToolbar" class="alert alert-info" style="display: none;">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <strong><span id="selectedCount">0</span> transactions selected</strong>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-warning" id="bulkLockBtn">
+                                    <i class="fas fa-lock"></i> Lock Selected
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" id="bulkUnlockBtn">
+                                    <i class="fas fa-lock-open"></i> Unlock Selected
+                                </button>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-tag"></i> Change Type
+                                    </button>
+                                    <ul class="dropdown-menu" id="bulkTypeDropdown">
+                                        @foreach($spendingTypes as $id => $name)
+                                            <li><a class="dropdown-item bulk-type-change" href="#" data-type-id="{{ $id }}">{{ $name }}</a></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover">
                             <thead class="thead-light">
                                 <tr>
+                                    <th class="text-center" width="40">
+                                        <input type="checkbox" id="selectAll" class="form-check-input">
+                                    </th>
                                     <th>
                                         <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'posted_date', 'direction' => request('sort') == 'posted_date' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
                                            class="text-decoration-none text-dark">
@@ -211,6 +240,9 @@
                             <tbody>
                                 @forelse($transactions as $transaction)
                                 <tr>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input transaction-checkbox" value="{{ $transaction->id }}">
+                                    </td>
                                     <td>{{ $transaction->posted_date->format('M d, Y') }}</td>
                                     <td>{{ $transaction->transaction_date->format('M d, Y') }}</td>
                                     <td>
@@ -289,7 +321,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="10" class="text-center py-4">
+                                    <td colspan="11" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-3x mb-3"></i>
                                             <h5>No transactions found</h5>
@@ -662,6 +694,118 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // Bulk operations functionality
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const transactionCheckboxes = document.querySelectorAll('.transaction-checkbox');
+    const bulkActionsToolbar = document.getElementById('bulkActionsToolbar');
+    const selectedCountSpan = document.getElementById('selectedCount');
+
+    // Select/Deselect all
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            transactionCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActionsToolbar();
+        });
+    }
+
+    // Individual checkbox change
+    transactionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkActionsToolbar();
+            // Update select all checkbox state
+            const allChecked = Array.from(transactionCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(transactionCheckboxes).some(cb => cb.checked);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+
+    // Update bulk actions toolbar visibility
+    function updateBulkActionsToolbar() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length > 0) {
+            bulkActionsToolbar.style.display = 'block';
+            selectedCountSpan.textContent = selectedIds.length;
+        } else {
+            bulkActionsToolbar.style.display = 'none';
+        }
+    }
+
+    // Get selected transaction IDs
+    function getSelectedIds() {
+        return Array.from(transactionCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+    }
+
+    // Bulk lock
+    document.getElementById('bulkLockBtn').addEventListener('click', function() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length === 0) return;
+
+        if (!confirm(`Lock ${selectedIds.length} transaction(s)?`)) return;
+
+        bulkAction('/transactions/bulk-lock', { transaction_ids: selectedIds });
+    });
+
+    // Bulk unlock
+    document.getElementById('bulkUnlockBtn').addEventListener('click', function() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length === 0) return;
+
+        if (!confirm(`Unlock ${selectedIds.length} transaction(s)?`)) return;
+
+        bulkAction('/transactions/bulk-unlock', { transaction_ids: selectedIds });
+    });
+
+    // Bulk type change
+    document.querySelectorAll('.bulk-type-change').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const typeId = this.getAttribute('data-type-id');
+            const typeName = this.textContent;
+            const selectedIds = getSelectedIds();
+            
+            if (selectedIds.length === 0) return;
+
+            if (!confirm(`Change spending type to "${typeName}" for ${selectedIds.length} transaction(s)?`)) return;
+
+            bulkAction('/transactions/bulk-update-type', { 
+                transaction_ids: selectedIds, 
+                spending_type_id: typeId 
+            });
+        });
+    });
+
+    // Generic bulk action function
+    function bulkAction(url, data) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error performing bulk action. Please try again.');
+        });
+    }
 });
 </script>
 @endpush

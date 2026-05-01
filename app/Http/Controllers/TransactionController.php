@@ -1136,4 +1136,86 @@ class TransactionController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Bulk lock transactions
+     */
+    public function bulkLock(Request $request)
+    {
+        $validated = $request->validate([
+            'transaction_ids' => 'required|array',
+            'transaction_ids.*' => 'exists:transactions,id'
+        ]);
+
+        try {
+            $count = Transaction::whereIn('id', $validated['transaction_ids'])
+                ->where('user_id', auth()->id())
+                ->update(['is_locked' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully locked {$count} transaction(s)"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error locking transactions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk unlock transactions
+     */
+    public function bulkUnlock(Request $request)
+    {
+        $validated = $request->validate([
+            'transaction_ids' => 'required|array',
+            'transaction_ids.*' => 'exists:transactions,id'
+        ]);
+
+        try {
+            $count = Transaction::whereIn('id', $validated['transaction_ids'])
+                ->where('user_id', auth()->id())
+                ->update(['is_locked' => false]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully unlocked {$count} transaction(s)"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error unlocking transactions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk update spending type
+     */
+    public function bulkUpdateType(Request $request)
+    {
+        $validated = $request->validate([
+            'transaction_ids' => 'required|array',
+            'transaction_ids.*' => 'exists:transactions,id',
+            'spending_type_id' => 'required|exists:ref_spending_types,id'
+        ]);
+
+        try {
+            $count = Transaction::whereIn('id', $validated['transaction_ids'])
+                ->where('user_id', auth()->id())
+                ->update(['spending_type_id' => $validated['spending_type_id']]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated {$count} transaction(s)"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating transactions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
