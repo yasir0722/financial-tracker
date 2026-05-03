@@ -1147,42 +1147,37 @@ class TransactionController extends Controller
      */
     public function findDuplicates(Request $request)
     {
-        $allTransactions = Transaction::where('user_id', auth()->id())
+        // Use chunking to avoid loading all transactions into memory at once (low-RAM server)
+        $groups = [];
+
+        Transaction::where('user_id', auth()->id())
             ->with(['bank', 'spendingType'])
             ->orderBy('id')
-            ->get();
+            ->chunk(200, function ($chunk) use (&$groups) {
+                foreach ($chunk as $t) {
+                    $key = implode('||', [
+                        (string) $t->posted_date,
+                        (string) $t->transaction_date,
+                        trim($t->transaction_detail),
+                        $t->bank_id,
+                        number_format((float) $t->debit, 2),
+                        number_format((float) $t->credit, 2),
+                    ]);
+                    $groups[$key][] = [
+                        'id'                 => $t->id,
+                        'posted_date'        => $t->posted_date->format('M d, Y'),
+                        'transaction_date'   => $t->transaction_date->format('M d, Y'),
+                        'transaction_detail' => $t->transaction_detail,
+                        'bank'               => $t->bank->name,
+                        'debit'              => $t->debit,
+                        'credit'             => $t->credit,
+                        'spending_type'      => $t->spendingType?->name ?? 'Not set',
+                        'is_locked'          => $t->is_locked,
+                    ];
+                }
+            });
 
-        // Group by composite key in PHP to avoid MySQL TEXT column GROUP BY limitation
-        $groups = [];
-        foreach ($allTransactions as $t) {
-            $key = implode('||', [
-                (string) $t->posted_date,
-                (string) $t->transaction_date,
-                trim($t->transaction_detail),
-                $t->bank_id,
-                number_format((float) $t->debit, 2),
-                number_format((float) $t->credit, 2),
-            ]);
-            $groups[$key][] = $t;
-        }
-
-        $duplicateGroups = [];
-        foreach ($groups as $group) {
-            if (count($group) > 1) {
-                $duplicateGroups[] = collect($group)->map(fn($t) => [
-                    'id'                 => $t->id,
-                    'posted_date'        => $t->posted_date->format('M d, Y'),
-                    'transaction_date'   => $t->transaction_date->format('M d, Y'),
-                    'transaction_detail' => $t->transaction_detail,
-                    'bank'               => $t->bank->name,
-                    'debit'              => $t->debit,
-                    'credit'             => $t->credit,
-                    'spending_type'      => $t->spendingType?->name ?? 'Not set',
-                    'is_locked'          => $t->is_locked,
-                ])->values();
-            }
-        }
-
+        $duplicateGroups = array_values(array_filter($groups, fn($g) => count($g) > 1));
         $totalDuplicates = array_sum(array_map(fn($g) => count($g) - 1, $duplicateGroups));
 
         return response()->json([
