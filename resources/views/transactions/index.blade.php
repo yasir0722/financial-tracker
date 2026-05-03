@@ -30,7 +30,7 @@
                 <div class="card-body">
                     <form method="GET" action="{{ route('transactions.index') }}">
                         <div class="row">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label for="bank_id" class="form-label">Bank</label>
                                 <select name="bank_id" id="bank_id" class="form-control">
                                     <option value="">All Banks</option>
@@ -64,7 +64,19 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label for="lock_status" class="form-label">Lock Status</label>
+                                <select name="lock_status" id="lock_status" class="form-control">
+                                    <option value="">All</option>
+                                    <option value="locked" {{ request('lock_status') == 'locked' ? 'selected' : '' }}>
+                                        <i class="fas fa-lock"></i> Locked
+                                    </option>
+                                    <option value="unlocked" {{ request('lock_status') == 'unlocked' ? 'selected' : '' }}>
+                                        <i class="fas fa-lock-open"></i> Unlocked
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <label for="search" class="form-label">Search Description</label>
                                 <input type="text" name="search" id="search" 
                                        class="form-control" value="{{ request('search') }}" 
@@ -234,7 +246,15 @@
                                     <th class="text-right">Balance Impact</th>
                                     <th>Type</th>
                                     <th class="text-center" width="60">
-                                        Lock
+                                        <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'is_locked', 'direction' => request('sort') == 'is_locked' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                           class="text-decoration-none text-dark">
+                                            Lock
+                                            @if(request('sort') == 'is_locked')
+                                                <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }}"></i>
+                                            @else
+                                                <i class="fas fa-sort text-muted"></i>
+                                            @endif
+                                        </a>
                                         <i class="fas fa-circle-info text-muted ms-1" 
                                            data-bs-toggle="tooltip" 
                                            data-bs-placement="top"

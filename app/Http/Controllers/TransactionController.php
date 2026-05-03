@@ -38,6 +38,11 @@ class TransactionController extends Controller
             $query->where('spending_type_id', $request->spending_type_id);
         }
 
+        // Filter by lock status
+        if ($request->filled('lock_status')) {
+            $query->where('is_locked', $request->lock_status === 'locked');
+        }
+
         // Search in transaction details
         if ($request->filled('search')) {
             $query->where('transaction_detail', 'like', '%' . $request->search . '%');
@@ -48,7 +53,7 @@ class TransactionController extends Controller
         $sortDirection = $request->get('direction', 'desc');
         
         // Validate sort field to prevent SQL injection
-        $allowedSortFields = ['posted_date', 'transaction_date', 'transaction_detail', 'debit', 'credit'];
+        $allowedSortFields = ['posted_date', 'transaction_date', 'transaction_detail', 'debit', 'credit', 'is_locked'];
         if (in_array($sortField, $allowedSortFields)) {
             $query->orderBy($sortField, $sortDirection);
         } else {
