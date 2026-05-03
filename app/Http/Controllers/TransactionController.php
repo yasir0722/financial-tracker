@@ -1143,6 +1143,78 @@ class TransactionController extends Controller
     }
 
     /**
+     * Find duplicate transactions for the current user
+     */
+    public function findDuplicates(Request $request)
+    {
+        $allTransactions = Transaction::where('user_id', auth()->id())
+            ->with(['bank', 'spendingType'])
+            ->orderBy('id')
+            ->get();
+
+        // Group by composite key in PHP to avoid MySQL TEXT column GROUP BY limitation
+        $groups = [];
+        foreach ($allTransactions as $t) {
+            $key = implode('||', [
+                (string) $t->posted_date,
+                (string) $t->transaction_date,
+                trim($t->transaction_detail),
+                $t->bank_id,
+                number_format((float) $t->debit, 2),
+                number_format((float) $t->credit, 2),
+            ]);
+            $groups[$key][] = $t;
+        }
+
+        $duplicateGroups = [];
+        foreach ($groups as $group) {
+            if (count($group) > 1) {
+                $duplicateGroups[] = collect($group)->map(fn($t) => [
+                    'id'                 => $t->id,
+                    'posted_date'        => $t->posted_date->format('M d, Y'),
+                    'transaction_date'   => $t->transaction_date->format('M d, Y'),
+                    'transaction_detail' => $t->transaction_detail,
+                    'bank'               => $t->bank->name,
+                    'debit'              => $t->debit,
+                    'credit'             => $t->credit,
+                    'spending_type'      => $t->spendingType?->name ?? 'Not set',
+                    'is_locked'          => $t->is_locked,
+                ])->values();
+            }
+        }
+
+        $totalDuplicates = array_sum(array_map(fn($g) => count($g) - 1, $duplicateGroups));
+
+        return response()->json([
+            'duplicate_groups' => $duplicateGroups,
+            'total_duplicates' => $totalDuplicates,
+        ]);
+    }
+
+    /**
+     * Delete selected duplicate transactions (skips locked)
+     */
+    public function deleteDuplicates(Request $request)
+    {
+        $ids = $request->input('transaction_ids', []);
+
+        if (empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'No transactions selected.']);
+        }
+
+        $deleted = Transaction::where('user_id', auth()->id())
+            ->whereIn('id', $ids)
+            ->where('is_locked', false)
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$deleted} duplicate transaction(s)." . ($deleted < count($ids) ? ' Some were skipped (locked).' : ''),
+            'deleted_count' => $deleted,
+        ]);
+    }
+
+    /**
      * Bulk lock transactions
      */
     public function bulkLock(Request $request)

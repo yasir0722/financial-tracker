@@ -31,6 +31,7 @@ Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
     // Transaction routes
+    Route::get('/transactions/find-duplicates', [TransactionController::class, 'findDuplicates'])->name('transactions.find-duplicates');
     Route::resource('transactions', TransactionController::class);
 
     // CSV Import routes
@@ -41,6 +42,7 @@ Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
     Route::post('/transactions/recategorize', [TransactionController::class, 'recategorizeTransactions'])->name('transactions.recategorize');
     Route::post('/transactions/{transaction}/update-spending-type', [TransactionController::class, 'updateSpendingType'])->name('transactions.update-spending-type');
     Route::post('/transactions/{transaction}/toggle-lock', [TransactionController::class, 'toggleLock'])->name('transactions.toggle-lock');
+    Route::post('/transactions/delete-duplicates', [TransactionController::class, 'deleteDuplicates'])->name('transactions.delete-duplicates');
     
     // Bulk operations
     Route::post('/transactions/bulk-lock', [TransactionController::class, 'bulkLock'])->name('transactions.bulk-lock');

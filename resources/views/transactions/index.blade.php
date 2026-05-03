@@ -78,9 +78,14 @@
                             </div>
                             <div class="col-md-2">
                                 <label for="search" class="form-label">Search Description</label>
-                                <input type="text" name="search" id="search" 
-                                       class="form-control" value="{{ request('search') }}" 
-                                       placeholder="Search transaction details...">
+                                <div class="input-group">
+                                    <input type="text" name="search" id="search" 
+                                           class="form-control" value="{{ request('search') }}" 
+                                           placeholder="Search transaction details...">
+                                    <button type="button" class="btn btn-outline-secondary" id="clearSearch" title="Clear search">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-9 mt-4">                               
                                 <!-- Years and Periods side by side -->
@@ -151,6 +156,9 @@
                     <h6 class="m-0 font-weight-bold text-primary">
                         Transaction List ({{ $transactions->total() }} total)
                     </h6>
+                    <button type="button" class="btn btn-sm btn-outline-warning" id="findDuplicatesBtn">
+                        <i class="fas fa-copy"></i> Find Duplicates
+                    </button>
                 </div>
                 <div class="card-body">
                     <!-- Bulk Actions Toolbar -->
@@ -158,6 +166,11 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <strong><span id="selectedCount">0</span> transactions selected</strong>
+                                <span id="selectedTotals" class="ms-3 text-dark">
+                                    Debit: <strong class="text-danger" id="totalDebit">RM0.00</strong>
+                                    &nbsp;|&nbsp;
+                                    Credit: <strong class="text-success" id="totalCredit">RM0.00</strong>
+                                </span>
                             </div>
                             <div class="btn-group">
                                 <button type="button" class="btn btn-sm btn-warning" id="bulkLockBtn">
@@ -267,7 +280,9 @@
                                 @forelse($transactions as $transaction)
                                 <tr>
                                     <td class="text-center">
-                                        <input type="checkbox" class="form-check-input transaction-checkbox" value="{{ $transaction->id }}">
+                                        <input type="checkbox" class="form-check-input transaction-checkbox" value="{{ $transaction->id }}"
+                                               data-debit="{{ $transaction->debit }}"
+                                               data-credit="{{ $transaction->credit }}">
                                     </td>
                                     <td>{{ $transaction->posted_date->format('M d, Y') }}</td>
                                     <td>{{ $transaction->transaction_date->format('M d, Y') }}</td>
@@ -382,6 +397,32 @@
                         </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicates Modal -->
+<div class="modal fade" id="duplicatesModal" tabindex="-1" aria-labelledby="duplicatesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicatesModalLabel"><i class="fas fa-copy"></i> Duplicate Transactions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="duplicatesModalBody">
+                <div class="text-center py-4" id="duplicatesLoading">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="mt-2 text-muted">Searching for duplicates...</p>
+                </div>
+                <div id="duplicatesContent" style="display:none;"></div>
+            </div>
+            <div class="modal-footer" id="duplicatesModalFooter" style="display:none;">
+                <span class="text-muted me-auto" id="duplicatesSummary"></span>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteSelectedDuplicatesBtn">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
             </div>
         </div>
     </div>
@@ -758,10 +799,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update bulk actions toolbar visibility
     function updateBulkActionsToolbar() {
-        const selectedIds = getSelectedIds();
-        if (selectedIds.length > 0) {
+        const selectedCheckboxes = Array.from(transactionCheckboxes).filter(cb => cb.checked);
+        if (selectedCheckboxes.length > 0) {
             bulkActionsToolbar.style.display = 'block';
-            selectedCountSpan.textContent = selectedIds.length;
+            selectedCountSpan.textContent = selectedCheckboxes.length;
+
+            let totalDebit = 0, totalCredit = 0;
+            selectedCheckboxes.forEach(cb => {
+                totalDebit  += parseFloat(cb.getAttribute('data-debit')  || 0);
+                totalCredit += parseFloat(cb.getAttribute('data-credit') || 0);
+            });
+            document.getElementById('totalDebit').textContent  = 'RM' + totalDebit.toFixed(2);
+            document.getElementById('totalCredit').textContent = 'RM' + totalCredit.toFixed(2);
         } else {
             bulkActionsToolbar.style.display = 'none';
         }
@@ -835,6 +884,124 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error:', error);
             alert('Error performing bulk action. Please try again.');
+        });
+    }
+    // Clear search button
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const searchInput = document.getElementById('search');
+    if (clearSearchBtn && searchInput) {
+        clearSearchBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            document.querySelector('form[method="GET"]').submit();
+        });
+    }
+
+    // Find Duplicates
+    const findDuplicatesBtn = document.getElementById('findDuplicatesBtn');
+    if (findDuplicatesBtn) {
+        findDuplicatesBtn.addEventListener('click', function () {
+            // Reset modal state
+            document.getElementById('duplicatesLoading').style.display = 'block';
+            document.getElementById('duplicatesContent').style.display = 'none';
+            document.getElementById('duplicatesModalFooter').style.display = 'none';
+
+            const modal = new bootstrap.Modal(document.getElementById('duplicatesModal'));
+            modal.show();
+
+            fetch('/transactions/find-duplicates', {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('duplicatesLoading').style.display = 'none';
+                const content = document.getElementById('duplicatesContent');
+
+                if (!data.duplicate_groups || data.duplicate_groups.length === 0) {
+                    content.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> No duplicate transactions found.</div>';
+                    content.style.display = 'block';
+                    return;
+                }
+
+                let html = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Found <strong>${data.duplicate_groups.length}</strong> group(s) of duplicates (<strong>${data.total_duplicates}</strong> extra record(s)). The first row in each group is kept by default — check rows to delete.</div>`;
+
+                data.duplicate_groups.forEach(function (group, gi) {
+                    html += `<div class="card mb-3 border-warning">
+                        <div class="card-header bg-warning bg-opacity-10 py-2">
+                            <strong>Group ${gi + 1}</strong> — ${group[0].transaction_detail} &nbsp;|&nbsp; ${group[0].bank} &nbsp;|&nbsp; ${group[0].transaction_date}
+                        </div>
+                        <div class="card-body p-0">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="40" class="text-center">Del</th>
+                                    <th>ID</th><th>Posted</th><th>Txn Date</th><th>Description</th><th>Bank</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th>Type</th><th>Locked</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    group.forEach(function (txn, ti) {
+                        const checked = ti > 0 ? 'checked' : '';
+                        const rowClass = ti > 0 ? 'table-danger' : '';
+                        html += `<tr class="${rowClass}">
+                            <td class="text-center"><input type="checkbox" class="form-check-input dup-checkbox" value="${txn.id}" ${checked}></td>
+                            <td>${txn.id}</td>
+                            <td>${txn.posted_date}</td>
+                            <td>${txn.transaction_date}</td>
+                            <td>${txn.transaction_detail}</td>
+                            <td>${txn.bank}</td>
+                            <td class="text-right text-danger">${txn.debit > 0 ? '$' + parseFloat(txn.debit).toFixed(2) : '-'}</td>
+                            <td class="text-right text-success">${txn.credit > 0 ? '$' + parseFloat(txn.credit).toFixed(2) : '-'}</td>
+                            <td>${txn.spending_type}</td>
+                            <td>${txn.is_locked ? '<i class="fas fa-lock text-warning"></i>' : '<i class="fas fa-lock-open text-muted"></i>'}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div></div>`;
+                });
+
+                content.innerHTML = html;
+                content.style.display = 'block';
+                document.getElementById('duplicatesModalFooter').style.display = 'flex';
+                document.getElementById('duplicatesSummary').textContent = `${data.total_duplicates} duplicate(s) pre-selected for deletion`;
+            })
+            .catch(err => {
+                document.getElementById('duplicatesLoading').style.display = 'none';
+                document.getElementById('duplicatesContent').innerHTML = '<div class="alert alert-danger">Error fetching duplicates. Please try again.</div>';
+                document.getElementById('duplicatesContent').style.display = 'block';
+            });
+        });
+    }
+
+    // Delete selected duplicates
+    const deleteBtn = document.getElementById('deleteSelectedDuplicatesBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function () {
+            const ids = Array.from(document.querySelectorAll('.dup-checkbox:checked')).map(cb => cb.value);
+            if (ids.length === 0) {
+                alert('No transactions selected for deletion.');
+                return;
+            }
+            if (!confirm(`Delete ${ids.length} selected duplicate transaction(s)? Locked transactions will be skipped.`)) return;
+
+            fetch('/transactions/delete-duplicates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ transaction_ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('duplicatesModal')).hide();
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(() => alert('Error deleting duplicates. Please try again.'));
         });
     }
 });
