@@ -28,9 +28,10 @@
         </div>
     </div>
 
-    <div class="d-flex flex-column gap-3" id="chartsGrid">
+    <div class="row g-3" id="chartsGrid">
         @foreach($spendingTypes as $type)
-        <div class="card border" id="card-{{ $type->id }}">
+        <div class="col-xl-6 col-12">
+        <div class="card border h-100" id="card-{{ $type->id }}">
             <div class="card-header d-flex justify-content-between align-items-center py-2 bg-white">
                 <span class="badge {{ $type->badge_class }} px-2 py-1" style="font-size:.85rem;">
                     <i class="fas fa-{{ $type->icon }} me-1"></i>{{ $type->name }}
@@ -49,6 +50,7 @@
                     <canvas id="canvas-{{ $type->id }}"></canvas>
                 </div>
             </div>
+        </div>
         </div>
         @endforeach
     </div>
