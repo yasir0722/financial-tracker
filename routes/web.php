@@ -26,6 +26,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
     // Dashboard route
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/spending-by-type', [DashboardController::class, 'spendingByTypeYearly'])->name('dashboard.spending-by-type');
 
     // Analytics route
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');

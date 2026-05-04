@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
 use App\Models\Bank;
+use App\Models\RefSpendingType;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -82,5 +83,60 @@ class DashboardController extends Controller
             'currentMonthSpending',
             'latestMonth'
         ));
+    }
+
+    /**
+     * Return monthly spending totals per spending type for a given year (AJAX)
+     */
+    public function spendingByTypeYearly(Request $request)
+    {
+        $userId = auth()->id();
+        $year   = (int) $request->get('year', now()->year);
+
+        $spendingTypes = RefSpendingType::active()->ordered()->get();
+
+        // Fetch all monthly totals for the year in one query
+        $rows = Transaction::where('user_id', $userId)
+            ->whereYear('transaction_date', $year)
+            ->select(
+                'spending_type_id',
+                DB::raw('MONTH(transaction_date) as month'),
+                DB::raw('SUM(debit)  as total_debit'),
+                DB::raw('SUM(credit) as total_credit')
+            )
+            ->groupBy('spending_type_id', DB::raw('MONTH(transaction_date)'))
+            ->get()
+            ->groupBy('spending_type_id');
+
+        $types = $spendingTypes->map(function ($type) use ($rows) {
+            $monthly = array_fill(0, 12, 0.0); // index 0 = Jan ... 11 = Dec
+            foreach ($rows->get($type->id, collect()) as $row) {
+                $idx = $row->month - 1;
+                $monthly[$idx] = $type->code === 'income'
+                    ? (float) $row->total_credit
+                    : (float) $row->total_debit;
+            }
+            return [
+                'id'             => $type->id,
+                'name'           => $type->name,
+                'code'           => $type->code,
+                'icon'           => $type->icon,
+                'badge_class'    => $type->badge_class,
+                'monthly_totals' => $monthly,
+            ];
+        });
+
+        $availableYears = Transaction::where('user_id', $userId)
+            ->selectRaw('YEAR(transaction_date) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        return response()->json([
+            'year'            => $year,
+            'types'           => $types,
+            'available_years' => $availableYears,
+            'months'          => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        ]);
     }
 }
