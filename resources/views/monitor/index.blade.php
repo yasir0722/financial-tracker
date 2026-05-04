@@ -31,15 +31,15 @@
     <div class="d-flex flex-column gap-3" id="chartsGrid">
         @foreach($spendingTypes as $type)
         <div class="card border" id="card-{{ $type->id }}">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="badge {{ $type->badge_class }} px-2 py-1" style="font-size:.85rem;">
-                        <i class="fas fa-{{ $type->icon }} me-1"></i>{{ $type->name }}
-                    </span>
-                    <span class="fw-semibold text-primary" id="total-{{ $type->id }}">loading…</span>
-                </div>
-                {{-- Skeleton placeholder --}}
-                <div class="skeleton-bar d-flex align-items-end gap-1" style="height:120px;">
+            <div class="card-header d-flex justify-content-between align-items-center py-2 bg-white">
+                <span class="badge {{ $type->badge_class }} px-2 py-1" style="font-size:.85rem;">
+                    <i class="fas fa-{{ $type->icon }} me-1"></i>{{ $type->name }}
+                </span>
+                <span class="fw-semibold text-primary" id="total-{{ $type->id }}">loading…</span>
+            </div>
+            <div class="card-body p-2">
+                {{-- Skeleton placeholder (given unique id so JS can remove it) --}}
+                <div id="skel-{{ $type->id }}" class="d-flex align-items-end gap-1" style="height:120px;">
                     @for($i = 0; $i < 12; $i++)
                     <div class="bg-light rounded flex-fill" style="height:{{ rand(20,100) }}%; animation: pulse 1.5s infinite {{ $i*0.1 }}s;"></div>
                     @endfor
@@ -61,7 +61,14 @@
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.4; }
 }
-.skeleton-bar div { transition: height .3s; }
+.badge-primary   { background-color: #007bff !important; color: #fff !important; }
+.badge-success   { background-color: #28a745 !important; color: #fff !important; }
+.badge-warning   { background-color: #ffc107 !important; color: #212529 !important; }
+.badge-info      { background-color: #17a2b8 !important; color: #fff !important; }
+.badge-danger    { background-color: #dc3545 !important; color: #fff !important; }
+.badge-secondary { background-color: #6c757d !important; color: #fff !important; }
+.badge-dark      { background-color: #343a40 !important; color: #fff !important; }
+.badge-light     { background-color: #f8f9fa !important; color: #212529 !important; border:1px solid #dee2e6 !important; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -99,13 +106,13 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(`/monitor/type-data?year=${year}&type_id=${type.id}`)
                 .then(r => r.json())
                 .then(data => {
-                    const skeleton = document.querySelector(`#card-${type.id} .skeleton-bar`);
+                    const skeleton = document.getElementById(`skel-${type.id}`);
                     const wrapper  = document.getElementById(`wrapper-${type.id}`);
                     const canvas   = document.getElementById(`canvas-${type.id}`);
                     const totalEl  = document.getElementById(`total-${type.id}`);
 
-                    skeleton.style.display = 'none';
-                    wrapper.style.display  = 'block';
+                    if (skeleton) skeleton.remove();
+                    wrapper.style.display = 'block';
 
                     const color = colorMap[type.badge_class] || colorMap['badge-primary'];
 
