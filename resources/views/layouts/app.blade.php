@@ -135,6 +135,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
+                                <i class="fas fa-chart-line"></i> Monitor
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('spending-types.*') ? 'active' : '' }}" href="{{ route('spending-types.index') }}">
                                 <i class="fas fa-tags"></i> Spending Types
                             </a>
