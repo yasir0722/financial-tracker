@@ -18,6 +18,15 @@ class MonitorController extends Controller
 
         $spendingTypes = RefSpendingType::active()->ordered()->get();
 
+        // Pre-map for JS to avoid arrow-function syntax inside Blade @json()
+        $spendingTypesJs = $spendingTypes->map(function ($t) {
+            return [
+                'id'          => $t->id,
+                'code'        => $t->code,
+                'badge_class' => $t->badge_class,
+            ];
+        })->values();
+
         $availableYears = Transaction::where('user_id', $userId)
             ->selectRaw('YEAR(transaction_date) as year')
             ->distinct()
@@ -26,7 +35,7 @@ class MonitorController extends Controller
 
         $selectedYear = (int) $request->get('year', now()->year);
 
-        return view('monitor.index', compact('spendingTypes', 'availableYears', 'selectedYear'));
+        return view('monitor.index', compact('spendingTypes', 'availableYears', 'selectedYear', 'spendingTypesJs'));
     }
 
     /**

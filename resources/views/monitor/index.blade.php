@@ -67,11 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const year   = {{ $selectedYear }};
     const total  = {{ $spendingTypes->count() }};
-    const types  = @json($spendingTypes->map(fn($t) => [
-        'id'         => $t->id,
-        'code'       => $t->code,
-        'badge_class'=> $t->badge_class,
-    ]));
+    const types  = @json($spendingTypesJs);
 
     const colorMap = {
         'badge-success':   { bg: 'rgba(40,167,69,0.7)',   border: 'rgba(40,167,69,1)' },
