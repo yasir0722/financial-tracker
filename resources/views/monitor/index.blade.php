@@ -28,24 +28,25 @@
         </div>
     </div>
 
-    <div class="row g-3" id="chartsGrid">
+    <div class="d-flex flex-column gap-3" id="chartsGrid">
         @foreach($spendingTypes as $type)
-        <div class="col-xl-3 col-md-4 col-sm-6">
-            <div class="card border h-100" id="card-{{ $type->id }}">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge {{ $type->badge_class }} px-2 py-1" style="font-size:.8rem;">
-                            <i class="fas fa-{{ $type->icon }} me-1"></i>{{ $type->name }}
-                        </span>
-                        <span class="text-muted small fw-semibold year-total" id="total-{{ $type->id }}">…</span>
-                    </div>
-                    {{-- Skeleton placeholder --}}
-                    <div class="skeleton-bar d-flex align-items-end gap-1" style="height:130px;">
-                        @for($i = 0; $i < 12; $i++)
-                        <div class="bg-light rounded flex-fill" style="height:{{ rand(20,100) }}%; animation: pulse 1.5s infinite {{ $i*0.1 }}s;"></div>
-                        @endfor
-                    </div>
-                    <canvas id="canvas-{{ $type->id }}" style="display:none;"></canvas>
+        <div class="card border" id="card-{{ $type->id }}">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge {{ $type->badge_class }} px-2 py-1" style="font-size:.85rem;">
+                        <i class="fas fa-{{ $type->icon }} me-1"></i>{{ $type->name }}
+                    </span>
+                    <span class="fw-semibold text-primary" id="total-{{ $type->id }}">loading…</span>
+                </div>
+                {{-- Skeleton placeholder --}}
+                <div class="skeleton-bar d-flex align-items-end gap-1" style="height:120px;">
+                    @for($i = 0; $i < 12; $i++)
+                    <div class="bg-light rounded flex-fill" style="height:{{ rand(20,100) }}%; animation: pulse 1.5s infinite {{ $i*0.1 }}s;"></div>
+                    @endfor
+                </div>
+                {{-- Canvas wrapper with fixed height --}}
+                <div style="height:120px; display:none;" id="wrapper-{{ $type->id }}">
+                    <canvas id="canvas-{{ $type->id }}"></canvas>
                 </div>
             </div>
         </div>
@@ -99,11 +100,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(r => r.json())
                 .then(data => {
                     const skeleton = document.querySelector(`#card-${type.id} .skeleton-bar`);
+                    const wrapper  = document.getElementById(`wrapper-${type.id}`);
                     const canvas   = document.getElementById(`canvas-${type.id}`);
                     const totalEl  = document.getElementById(`total-${type.id}`);
 
                     skeleton.style.display = 'none';
-                    canvas.style.display   = 'block';
+                    wrapper.style.display  = 'block';
 
                     const color = colorMap[type.badge_class] || colorMap['badge-primary'];
 
@@ -143,8 +145,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         }
                     });
-
-                    canvas.style.height = '130px';
 
                     totalEl.textContent = 'RM ' + data.year_total.toLocaleString('en-MY', {
                         minimumFractionDigits: 2, maximumFractionDigits: 2
