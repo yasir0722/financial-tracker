@@ -332,6 +332,15 @@
             border-radius: 8px;
         }
 
+        select.form-control option, .form-select option {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        select.form-control option:disabled, .form-select option:disabled {
+            color: var(--text-subtle);
+        }
+
         .form-control:focus, .form-select:focus {
             background: rgba(255,255,255,0.08);
             border-color: var(--accent);
