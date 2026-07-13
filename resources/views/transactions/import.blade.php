@@ -2,6 +2,95 @@
 
 @section('title', 'Import CSV Transactions')
 
+@push('styles')
+<style>
+    /* Dark theme overrides for import page */
+    .bg-light {
+        background: rgba(255,255,255,0.06) !important;
+        color: var(--text-primary);
+    }
+    .alert-info {
+        background: rgba(56,189,248,0.1);
+        border: 1px solid rgba(56,189,248,0.25);
+        color: #7dd3fc;
+    }
+    .alert-info strong { color: #bae6fd; }
+    .table-warning > * {
+        background: rgba(245,158,11,0.12) !important;
+        color: #fcd34d !important;
+    }
+    code {
+        background: rgba(255,255,255,0.08);
+        color: #a5b4fc;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    /* BS5 file input dark style */
+    input[type="file"].form-control::file-selector-button {
+        background: rgba(99,102,241,0.15);
+        border: 0;
+        border-right: 1px solid rgba(255,255,255,0.12);
+        color: #a5b4fc;
+        font-size: 0.82rem;
+        font-weight: 500;
+        padding: 0.5rem 0.85rem;
+        margin-right: 0.75rem;
+        transition: background 0.15s;
+    }
+    input[type="file"].form-control::file-selector-button:hover {
+        background: rgba(99,102,241,0.28);
+    }
+    input[type="file"].form-control {
+        padding-top: 0.42rem;
+        cursor: pointer;
+    }
+    .selected-files-box {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        padding: 0.85rem 1rem;
+    }
+    .selected-files-box .file-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.35rem 0;
+    }
+    .selected-files-box .file-row + .file-row {
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .selected-files-box .file-name {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    .selected-files-box .file-size {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+    .fa-file-csv { color: #6ee7b7; }
+    .btn-secondary {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: var(--text-primary);
+    }
+    .btn-secondary:hover {
+        background: rgba(255,255,255,0.14);
+        border-color: rgba(255,255,255,0.22);
+        color: var(--text-primary);
+    }
+    .btn-outline-info {
+        color: #7dd3fc;
+        border-color: rgba(56,189,248,0.4);
+    }
+    .btn-outline-info:hover {
+        background: rgba(56,189,248,0.12);
+        color: #bae6fd;
+        border-color: rgba(56,189,248,0.6);
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -155,11 +244,8 @@
 
                         <div class="form-group">
                             <label for="csv_files" class="form-label">CSV/PDF Files <span class="text-danger">*</span></label>
-                            <div class="custom-file">
-                                <input type="file" class="custom-file-input @error('csv_files') is-invalid @enderror" 
-                                       id="csv_files" name="csv_files[]" accept=".csv,.txt,.pdf" multiple required>
-                                <label class="custom-file-label" for="csv_files">Choose CSV or PDF files...</label>
-                            </div>
+                            <input type="file" class="form-control @error('csv_files') is-invalid @enderror"
+                                   id="csv_files" name="csv_files[]" accept=".csv,.txt,.pdf" multiple required>
                             @error('csv_files')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -169,10 +255,10 @@
                         <!-- Selected Files List -->
                         <div id="selected-files-container" class="form-group" style="display: none;">
                             <label class="form-label">Selected Files:</label>
-                            <div id="selected-files-list" class="border rounded p-3 bg-light">
+                            <div id="selected-files-list" class="selected-files-box">
                                 <!-- Files will be listed here dynamically -->
                             </div>
-                            <small class="form-text text-muted">
+                            <small class="form-text text-muted mt-1 d-block">
                                 <span id="file-count">0</span> file(s) selected (max 20)
                             </small>
                         </div>
@@ -225,25 +311,7 @@ document.getElementById('csv_files').addEventListener('change', function(e) {
         e.target.value = '';
         return;
     }
-    
-    // Update file label
-    const fileName = files.length > 1 
-        ? `${files.length} files selected`
-        : files.length === 1 
-            ? files[0].name 
-            : 'Choose CSV files...';
-    document.querySelector('.custom-file-label').textContent = fileName;
-    
-    // Update file list
-    updateFileList(files);
-    
-    // Preview first file
-    if (files.length > 0) {
-        previewCSV(files[0]);
-    }
-});
 
-// Update the selected files list
 function updateFileList(files) {
     const container = document.getElementById('selected-files-container');
     const filesList = document.getElementById('selected-files-list');
@@ -261,28 +329,25 @@ function updateFileList(files) {
     fileCount.textContent = files.length;
     
     // Create file list HTML
-    let filesHTML = '<div class="row">';
+    let filesHTML = '';
     files.forEach((file, index) => {
         const fileSize = (file.size / 1024).toFixed(1) + ' KB';
         const isValid = file.size <= 2048000; // 2MB limit
         
         filesHTML += `
-            <div class="col-md-6 mb-2">
-                <div class="d-flex align-items-center ${isValid ? '' : 'text-danger'}">
-                    <i class="fas fa-file-csv mr-2"></i>
-                    <div class="flex-grow-1">
-                        <div class="small font-weight-bold">${file.name}</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">${fileSize}</div>
-                    </div>
-                    ${isValid 
-                        ? '<i class="fas fa-check-circle text-success"></i>' 
-                        : '<i class="fas fa-exclamation-triangle text-danger" title="File too large"></i>'
-                    }
+            <div class="file-row${isValid ? '' : ' text-danger'}">
+                <i class="fas fa-file-csv"></i>
+                <div class="flex-grow-1">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${fileSize}</div>
                 </div>
+                ${isValid 
+                    ? '<i class="fas fa-check-circle text-success"></i>' 
+                    : '<i class="fas fa-exclamation-triangle text-danger" title="File too large (max 2MB)"></i>'
+                }
             </div>
         `;
     });
-    filesHTML += '</div>';
     
     filesList.innerHTML = filesHTML;
 }
