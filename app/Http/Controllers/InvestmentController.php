@@ -39,24 +39,23 @@ class InvestmentController extends Controller
             $years = $byYear->keys()->sort()->values();
 
             $summary = [];
-            $previousYearEnd = null;
 
-            foreach ($years as $year) {
+            foreach ($years as $yearIndex => $year) {
                 $yearTransactions = $byYear[$year];
                 $startBalance = (float) $yearTransactions->first()->balance;
-                $endBalance = (float) $yearTransactions->last()->balance;
-                $baseline = $previousYearEnd ?? $startBalance;
-                $increase = round($endBalance - $baseline, 2);
+                $nextYear = $years->get($yearIndex + 1);
+                $endBalance = $nextYear !== null
+                    ? (float) $byYear[$nextYear]->first()->balance
+                    : (float) $yearTransactions->last()->balance;
+                $increase = round($endBalance - $startBalance, 2);
 
                 $summary[] = [
                     'year' => $year,
-                    'start_balance' => $baseline,
+                    'start_balance' => $startBalance,
                     'end_balance' => $endBalance,
                     'increase' => $increase,
-                    'growth_percent' => $baseline != 0 ? round(($increase / $baseline) * 100, 2) : null,
+                    'growth_percent' => $startBalance != 0 ? round(($increase / $startBalance) * 100, 2) : null,
                 ];
-
-                $previousYearEnd = $endBalance;
             }
 
             $yearlySummary[$bank->id] = [

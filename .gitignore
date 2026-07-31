@@ -18,6 +18,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+/.config/psysh/psysh_history
 
 # NPM
 *.log
