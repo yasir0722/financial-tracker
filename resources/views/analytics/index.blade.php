@@ -10,6 +10,30 @@
     .category-row {
         transition: background-color 0.2s ease;
     }
+    .analytics-transaction-table {
+        background-color: var(--bg-surface) !important;
+        color: var(--text-primary) !important;
+    }
+    .analytics-transaction-table thead {
+        background-color: var(--bg-hover) !important;
+    }
+    .analytics-transaction-table thead th {
+        background-color: var(--bg-hover) !important;
+        color: var(--text-muted) !important;
+        border-color: var(--border) !important;
+    }
+    .analytics-transaction-table tbody tr,
+    .analytics-transaction-table tbody td {
+        background-color: transparent !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border) !important;
+    }
+    .analytics-transaction-table tbody tr:nth-of-type(odd) td {
+        background-color: rgba(255,255,255,0.025) !important;
+    }
+    .analytics-transaction-table tbody tr:hover td {
+        background-color: var(--bg-hover) !important;
+    }
     .bg-purple {
         background-color: #6f42c1;
         color: white;
@@ -278,8 +302,8 @@
                                         <!-- Child Rows (Transactions) - Expanded by default -->
                                         <tr class="collapse show" id="category-{{ $code }}">
                                             <td colspan="5" class="p-0">
-                                                <table class="table table-sm table-striped mb-0" style="background-color: #f8f9fa;">
-                                                    <thead style="background-color: #e9ecef;">
+                                                <table class="table table-sm table-striped mb-0 analytics-transaction-table">
+                                                    <thead>
                                                         <tr>
                                                             <th width="5%"></th>
                                                             <th>Date</th>
