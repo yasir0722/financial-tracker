@@ -1403,4 +1403,34 @@ class TransactionController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Bulk soft-delete transactions (skips locked)
+     */
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'transaction_ids' => 'required|array',
+            'transaction_ids.*' => 'exists:transactions,id'
+        ]);
+
+        try {
+            $count = Transaction::whereIn('id', $validated['transaction_ids'])
+                ->where('user_id', auth()->id())
+                ->where('is_locked', false)
+                ->delete();
+
+            $skipped = count($validated['transaction_ids']) - $count;
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} transaction(s)" . ($skipped > 0 ? ". {$skipped} locked transaction(s) were skipped." : '')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting transactions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

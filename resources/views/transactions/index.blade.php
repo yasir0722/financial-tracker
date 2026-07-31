@@ -189,6 +189,9 @@
                                         @endforeach
                                     </ul>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn">
+                                    <i class="fas fa-trash"></i> Delete Selected
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -860,6 +863,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 spending_type_id: typeId 
             });
         });
+    });
+
+    // Bulk delete
+    document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
+        const selectedIds = getSelectedIds();
+        if (selectedIds.length === 0) return;
+
+        if (!confirm(`Delete ${selectedIds.length} transaction(s)? Locked transactions will be skipped.`)) return;
+
+        bulkAction('/transactions/bulk-delete', { transaction_ids: selectedIds });
     });
 
     // Generic bulk action function
