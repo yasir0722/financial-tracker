@@ -319,9 +319,11 @@ class TransactionController extends Controller
                     $path = $file->store('temp');
                     $fullPath = storage_path('app/' . $path);
 
-                    // Check if file is PDF (for Maybank / Tabung Haji)
+                    // Check if file is PDF (for Maybank / Tabung Haji / ASB)
                     if ($fileExtension === 'pdf') {
-                        if (strtolower($bank->name) === 'tabung haji') {
+                        if (strtolower($bank->name) === 'asb') {
+                            $transactions = $this->parseAsbPDF($fullPath, $bank);
+                        } elseif (strtolower($bank->name) === 'tabung haji') {
                             $transactions = $this->parseTabungHajiPDF($fullPath, $bank);
                         } else {
                             $transactions = $this->parseMaybankPDF($fullPath, $bank);
@@ -1087,6 +1089,73 @@ class TransactionController extends Controller
             }
         }
         
+        return $transactions;
+    }
+
+    /**
+     * Parse ASB detailed transaction table from PDF statement.
+     */
+    private function parseAsbPDF($pdfPath, $bank)
+    {
+        $transactions = [];
+
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf = $parser->parseFile($pdfPath);
+            $text = $pdf->getText();
+            $normalized = trim(preg_replace('/\s+/', ' ', $text));
+
+            $tableStart = stripos($normalized, 'Baki Unit');
+            if ($tableStart !== false) {
+                $tableStart = strpos($normalized, ' ', $tableStart) ?: $tableStart;
+            }
+            $tableText = $tableStart === false ? $normalized : substr($normalized, $tableStart);
+            $footerStart = stripos($tableText, 'Penyata ini dijana secara elektronik');
+            if ($footerStart !== false) {
+                $tableText = substr($tableText, 0, $footerStart);
+            }
+
+            preg_match_all(
+                '/(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+((?:-?[\d,]+\.\d+\s+){9}-?[\d,]+\.\d+)(?=\s+\d{2}\/\d{2}\/\d{4}|\s*$)/',
+                trim($tableText),
+                $matches,
+                PREG_SET_ORDER
+            );
+
+            foreach ($matches as $match) {
+                $parsedDate = Carbon::createFromFormat('d/m/Y', $match[1])->format('Y-m-d');
+                $description = trim($match[2]);
+                $amounts = preg_split('/\s+/', trim($match[3]));
+                $netAmount = abs(floatval(str_replace(',', '', $amounts[4])));
+                $balance = floatval(str_replace(',', '', $amounts[9]));
+                $isRedemption = preg_match('/redeem|jualan balik|redemption|withdrawal/i', $description);
+                $debit = $isRedemption ? $netAmount : 0;
+                $credit = $isRedemption ? 0 : $netAmount;
+
+                $transactions[] = [
+                    'posted_date' => $parsedDate,
+                    'transaction_date' => $parsedDate,
+                    'transaction_detail' => $description,
+                    'debit' => $debit,
+                    'credit' => $credit,
+                    'balance' => $balance,
+                    'spending_type_id' => $this->detectSpendingTypeId($description, $credit)
+                ];
+            }
+
+            if (empty($transactions)) {
+                $transactions[] = ['error' => 'No transactions found in PDF. Please ensure this is a valid ASB statement.'];
+            }
+        } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+
+            if (stripos($errorMessage, 'secured') !== false || stripos($errorMessage, 'encrypted') !== false) {
+                $transactions[] = ['error' => 'PDF is password-protected. Please remove the password first: Open the PDF, print to PDF (uncheck password protection), then upload the new file.'];
+            } else {
+                $transactions[] = ['error' => 'Error parsing ASB PDF: ' . $errorMessage];
+            }
+        }
+
         return $transactions;
     }
 

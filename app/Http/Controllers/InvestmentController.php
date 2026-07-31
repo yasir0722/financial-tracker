@@ -52,7 +52,14 @@ class InvestmentController extends Controller
                 $summary[] = [
                     'year' => $year,
                     'start_balance' => $startBalance,
+                    'start_date' => $yearTransactions->first()->transaction_date->format('Y-m-d'),
                     'end_balance' => $endBalance,
+                    'end_date' => $nextYear !== null
+                        ? $byYear[$nextYear]->first()->transaction_date->format('Y-m-d')
+                        : $yearTransactions->last()->transaction_date->format('Y-m-d'),
+                    'end_date_label' => $nextYear !== null
+                        ? $byYear[$nextYear]->first()->transaction_date->format('d M Y')
+                        : $yearTransactions->last()->transaction_date->format('d M Y'),
                     'increase' => $increase,
                     'growth_percent' => $startBalance != 0 ? round(($increase / $startBalance) * 100, 2) : null,
                 ];
@@ -61,6 +68,8 @@ class InvestmentController extends Controller
             $yearlySummary[$bank->id] = [
                 'name' => $bank->name,
                 'latest_balance' => (float) $transactions->last()->balance,
+                'latest_date' => $transactions->last()->transaction_date->format('Y-m-d'),
+                'latest_date_label' => $transactions->last()->transaction_date->format('d M Y'),
                 'years' => $summary,
             ];
         }

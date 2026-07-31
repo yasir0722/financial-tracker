@@ -151,6 +151,14 @@
                                 </ol>
                             </div>
                             <div class="col-md-4">
+                                <strong>🏦 ASB:</strong>
+                                <ol class="small">
+                                    <li><strong>Format:</strong> PDF Statement</li>
+                                    <li>Upload your ASNB detailed statement</li>
+                                    <li>Only the transaction table is imported</li>
+                                </ol>
+                            </div>
+                            <div class="col-md-4">
                                 <strong>🏦 Other Banks:</strong>
                                 <ol class="small">
                                     <li>Posted Date (YYYY-MM-DD)</li>
@@ -167,7 +175,7 @@
                             <code class="small">"19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</code><br>
                             <strong>� Maybank:</strong><br>
                             <span class="small">Upload your PDF statement file (e.g., 162263-826614_20250831.pdf)</span><br>
-                            <strong>📝 Tabung Haji Example:</strong><br>
+                            <strong>📝 Tabung Haji / ASB:</strong><br>
                             <span class="small">Upload your PENYATA AKAUN PDF statement (e.g., THiJARi statement)</span><br>
                             <strong>📝 Generic Example:</strong><br>
                             <code class="small">2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,</code>
@@ -259,7 +267,7 @@
                             @error('csv_files')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Maybank/Tabung Haji: Upload PDF statements | Other banks: Upload CSV files</small>
+                            <small class="form-text text-muted">Maybank/Tabung Haji/ASB: Upload PDF statements | Other banks: Upload CSV files</small>
                         </div>
 
                         <!-- Selected Files List -->
@@ -468,6 +476,16 @@ function updateFormatInfo() {
                         <li>Debit/credit is auto-detected from the running balance (JUMLAH SIMPANAN)</li>
                     </ol>
                     <small><strong>Example:</strong> 28/01/2026 SIMPANAN MELALUI DIRECT DEBIT - SENDIRI - 1458573035 500.00 22,397.60</small>
+                `;
+                break;
+            case 'asb':
+                formatHTML = `
+                    <ol class="mb-2">
+                        <li><strong>Format:</strong> ASNB PDF Statement</li>
+                        <li>Only the detailed transaction table is imported</li>
+                        <li>Unit Balance is saved as the investment balance</li>
+                    </ol>
+                    <small><strong>Example:</strong> Direct Debit through myASNB, 200.00, ending balance 2,040.20</small>
                 `;
                 break;
             case 'maybank':
