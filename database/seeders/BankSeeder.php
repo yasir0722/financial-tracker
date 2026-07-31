@@ -25,8 +25,8 @@ class BankSeeder extends Seeder
 
         // Other Financial Institutions (type = false)
         $otherInstitutions = [
-            ['name' => 'Tabung Haji', 'type' => false],
-            ['name' => 'ASB', 'type' => false],
+            ['name' => 'Tabung Haji', 'type' => false, 'is_investment' => true],
+            ['name' => 'ASB', 'type' => false, 'is_investment' => true],
             ['name' => 'KWSP', 'type' => false],
         ];
 

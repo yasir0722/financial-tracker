@@ -8,6 +8,7 @@ use App\Models\Bank;
 use App\Models\RefSpendingType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class TransactionController extends Controller
@@ -318,9 +319,13 @@ class TransactionController extends Controller
                     $path = $file->store('temp');
                     $fullPath = storage_path('app/' . $path);
 
-                    // Check if file is PDF (for Maybank)
+                    // Check if file is PDF (for Maybank / Tabung Haji)
                     if ($fileExtension === 'pdf') {
-                        $transactions = $this->parseMaybankPDF($fullPath, $bank);
+                        if (strtolower($bank->name) === 'tabung haji') {
+                            $transactions = $this->parseTabungHajiPDF($fullPath, $bank);
+                        } else {
+                            $transactions = $this->parseMaybankPDF($fullPath, $bank);
+                        }
                     } else {
                         // CSV processing
                         $csvData = array_map('str_getcsv', file($fullPath));
@@ -351,6 +356,7 @@ class TransactionController extends Controller
                                 // Fields to update if record exists
                                 'debit' => $parsedData['debit'],
                                 'credit' => $parsedData['credit'],
+                                'balance' => $parsedData['balance'] ?? null,
                                 'spending_type_id' => $parsedData['spending_type_id']
                             ]);
 
@@ -1081,6 +1087,113 @@ class TransactionController extends Controller
             }
         }
         
+        return $transactions;
+    }
+
+    /**
+     * Parse Tabung Haji (LEMBAGA TABUNG HAJI) PDF statement
+     * Format: TARIKH (dd/mm/yyyy), BUTIRAN, WANG KELUAR, WANG MASUK, JUMLAH SIMPANAN
+     */
+    private function parseTabungHajiPDF($pdfPath, $bank)
+    {
+        $transactions = [];
+
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf = $parser->parseFile($pdfPath);
+            $text = $pdf->getText();
+
+            // Tabung Haji PDFs don't reliably place one row per line (cells are positioned by
+            // coordinates), so collapse all whitespace/newlines and scan the whole text instead.
+            $normalized = trim(preg_replace('/\s+/', ' ', $text));
+
+            $previousBalance = null;
+            if (preg_match('/BAKI DIBAWA KE HADAPAN\s*\*+\s*([\d,]+\.\d{2})/i', $normalized, $balMatch, PREG_OFFSET_CAPTURE)) {
+                $previousBalance = floatval(str_replace(',', '', $balMatch[1][0]));
+                $startPos = $balMatch[0][1] + strlen($balMatch[0][0]);
+            } else {
+                $startPos = 0;
+            }
+
+            // Trim off the footer text so the last transaction isn't swallowed/mismatched
+            $endPos = strlen($normalized);
+            foreach (['ZAKAT PERNIAGAAN', 'SEBARANG PERBEZAAN MAKLUMAT', 'Menara TH'] as $footerMarker) {
+                $pos = stripos($normalized, $footerMarker, $startPos);
+                if ($pos !== false && $pos < $endPos) {
+                    $endPos = $pos;
+                }
+            }
+
+            $transactionsText = trim(substr($normalized, $startPos, $endPos - $startPos));
+
+            preg_match_all(
+                '/(\d{2}\/\d{2}\/\d{4})\s*(.+?)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})(?=\s*\d{2}\/\d{2}\/\d{4}|\s*$)/',
+                $transactionsText,
+                $allMatches,
+                PREG_SET_ORDER
+            );
+
+            foreach ($allMatches as $matches) {
+                $date = $matches[1];
+                $description = trim($matches[2]);
+                $amount = floatval(str_replace(',', '', $matches[3]));
+                $balance = floatval(str_replace(',', '', $matches[4]));
+
+                try {
+                    $parsedDate = Carbon::createFromFormat('d/m/Y', $date)->format('Y-m-d');
+
+                    $debit = 0;
+                    $credit = 0;
+
+                    if ($previousBalance !== null) {
+                        // Determine debit vs credit by comparing against the running balance
+                        $diff = round($balance - $previousBalance, 2);
+                        if ($diff < 0) {
+                            $debit = $amount;
+                        } else {
+                            $credit = $amount;
+                        }
+                    } else {
+                        // No prior balance to compare against; assume credit (deposit)
+                        $credit = $amount;
+                    }
+
+                    $previousBalance = $balance;
+
+                    $spendingTypeId = $this->detectSpendingTypeId($description, $credit);
+
+                    $transactions[] = [
+                        'posted_date' => $parsedDate,
+                        'transaction_date' => $parsedDate,
+                        'transaction_detail' => $description,
+                        'debit' => $debit,
+                        'credit' => $credit,
+                        'balance' => $balance,
+                        'spending_type_id' => $spendingTypeId
+                    ];
+                } catch (\Exception $e) {
+                    // Skip entries with invalid dates
+                    continue;
+                }
+            }
+
+            if (empty($transactions)) {
+                $transactions[] = ['error' => 'No transactions found in PDF. Please ensure this is a valid Tabung Haji statement.'];
+                // Dump the raw extracted text so we can see why the regex didn't match
+                Log::debug('Tabung Haji PDF parse - raw extracted text', ['text' => $text]);
+                Log::debug('Tabung Haji PDF parse - normalized text', ['normalized' => $normalized ?? null]);
+            }
+
+        } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+
+            if (stripos($errorMessage, 'secured') !== false || stripos($errorMessage, 'encrypted') !== false) {
+                $transactions[] = ['error' => 'PDF is password-protected. Please remove the password first: Open the PDF, print to PDF (uncheck password protection), then upload the new file.'];
+            } else {
+                $transactions[] = ['error' => 'Error parsing PDF: ' . $errorMessage];
+            }
+        }
+
         return $transactions;
     }
 

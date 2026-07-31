@@ -18,6 +18,7 @@ class Transaction extends Model
         'transaction_detail',
         'debit',
         'credit',
+        'balance',
         'bank_id',
         'spending_type_id',
         'is_locked'
@@ -28,6 +29,7 @@ class Transaction extends Model
         'transaction_date' => 'date',
         'debit' => 'decimal:2',
         'credit' => 'decimal:2',
+        'balance' => 'decimal:2',
         'is_locked' => 'boolean'
     ];
 

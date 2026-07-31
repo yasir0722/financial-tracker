@@ -143,6 +143,14 @@
                                 </div>
                             </div>
                             <div class="col-md-4">
+                                <strong>🏦 Tabung Haji:</strong>
+                                <ol class="small">
+                                    <li><strong>Format:</strong> PDF Statement</li>
+                                    <li>Upload your Tabung Haji (THiJARi) PDF statement</li>
+                                    <li>Transactions will be extracted automatically</li>
+                                </ol>
+                            </div>
+                            <div class="col-md-4">
                                 <strong>🏦 Other Banks:</strong>
                                 <ol class="small">
                                     <li>Posted Date (YYYY-MM-DD)</li>
@@ -159,6 +167,8 @@
                             <code class="small">"19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</code><br>
                             <strong>� Maybank:</strong><br>
                             <span class="small">Upload your PDF statement file (e.g., 162263-826614_20250831.pdf)</span><br>
+                            <strong>📝 Tabung Haji Example:</strong><br>
+                            <span class="small">Upload your PENYATA AKAUN PDF statement (e.g., THiJARi statement)</span><br>
                             <strong>📝 Generic Example:</strong><br>
                             <code class="small">2025-10-01,2025-10-01,"Grocery Store Purchase",45.67,</code>
                         </div>
@@ -249,7 +259,7 @@
                             @error('csv_files')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Maybank: Upload PDF statements | Other banks: Upload CSV files</small>
+                            <small class="form-text text-muted">Maybank/Tabung Haji: Upload PDF statements | Other banks: Upload CSV files</small>
                         </div>
 
                         <!-- Selected Files List -->
@@ -448,6 +458,16 @@ function updateFormatInfo() {
                         <li><strong>Credit(RM):</strong> Amount or empty</li>
                     </ol>
                     <small><strong>Example:</strong> "19-Aug-2025","17-Aug-2025","99 SPEEDMART-1306","46.20",""</small>
+                `;
+                break;
+            case 'tabung haji':
+                formatHTML = `
+                    <ol class="mb-2">
+                        <li><strong>Format:</strong> PDF Statement (PENYATA AKAUN)</li>
+                        <li>Upload your Tabung Haji PDF statement</li>
+                        <li>Debit/credit is auto-detected from the running balance (JUMLAH SIMPANAN)</li>
+                    </ol>
+                    <small><strong>Example:</strong> 28/01/2026 SIMPANAN MELALUI DIRECT DEBIT - SENDIRI - 1458573035 500.00 22,397.60</small>
                 `;
                 break;
             case 'maybank':

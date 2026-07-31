@@ -6,6 +6,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\SpendingTypeController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\InvestmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,6 +36,9 @@ Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
     // Monitor routes
     Route::get('/monitor', [MonitorController::class, 'index'])->name('monitor.index');
     Route::get('/monitor/type-data', [MonitorController::class, 'typeData'])->name('monitor.type-data');
+
+    // Investment routes
+    Route::get('/investments', [InvestmentController::class, 'index'])->name('investments.index');
 
     // Transaction routes
     Route::get('/transactions/find-duplicates', [TransactionController::class, 'findDuplicates'])->name('transactions.find-duplicates');

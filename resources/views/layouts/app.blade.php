@@ -584,6 +584,11 @@
                 <i class="fas fa-chart-line"></i> Monitor
             </a>
 
+            <div class="sidebar-section-label">Investment</div>
+            <a class="nav-link {{ request()->routeIs('investments.*') ? 'active' : '' }}" href="{{ route('investments.index') }}">
+                <i class="fas fa-piggy-bank"></i> Investments
+            </a>
+
             <div class="sidebar-section-label">Settings</div>
             <a class="nav-link {{ request()->routeIs('spending-types.*') ? 'active' : '' }}" href="{{ route('spending-types.index') }}">
                 <i class="fas fa-tags"></i> Spending Types

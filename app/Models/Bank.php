@@ -13,11 +13,13 @@ class Bank extends Model
 
     protected $fillable = [
         'name',
-        'type'
+        'type',
+        'is_investment'
     ];
 
     protected $casts = [
-        'type' => 'boolean'
+        'type' => 'boolean',
+        'is_investment' => 'boolean'
     ];
 
     /**
