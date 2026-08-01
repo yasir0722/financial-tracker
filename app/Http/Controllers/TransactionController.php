@@ -305,6 +305,7 @@ class TransactionController extends Controller
             $files = $request->file('csv_files');
             $totalImportedCount = 0;
             $totalUpdatedCount = 0;
+            $totalSkippedCount = 0;
             $allErrors = [];
             $processedFiles = 0;
 
@@ -337,6 +338,7 @@ class TransactionController extends Controller
 
                     $importedCount = 0;
                     $updatedCount = 0;
+                    $skippedCount = 0;
                     $errors = [];
             
                     foreach ($transactions as $parsedData) {
@@ -346,6 +348,18 @@ class TransactionController extends Controller
                         }
 
                         try {
+                            $match = Transaction::where('user_id', auth()->id())
+                                ->where('posted_date', $parsedData['posted_date'])
+                                ->where('transaction_date', $parsedData['transaction_date'])
+                                ->where('transaction_detail', $parsedData['transaction_detail'])
+                                ->where('bank_id', $request->bank_id)
+                                ->first();
+
+                            if ($match?->is_locked) {
+                                $skippedCount++;
+                                continue;
+                            }
+
                             // Use updateOrCreate to prevent duplicates
                             $transaction = Transaction::updateOrCreate([
                                 // Unique identifier fields
@@ -382,6 +396,7 @@ class TransactionController extends Controller
                     // Add to totals
                     $totalImportedCount += $importedCount;
                     $totalUpdatedCount += $updatedCount;
+                    $totalSkippedCount += $skippedCount;
                     $processedFiles++;
 
                     // Clean up temp file
@@ -402,6 +417,9 @@ class TransactionController extends Controller
             }
             if ($totalUpdatedCount > 0) {
                 $messageParts[] = "Updated {$totalUpdatedCount} existing transactions";
+            }
+            if ($totalSkippedCount > 0) {
+                $messageParts[] = "Skipped {$totalSkippedCount} locked transactions";
             }
             
             $message = !empty($messageParts) 
