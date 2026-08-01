@@ -35,15 +35,6 @@
             <div class="investment-panel" data-investment-panel="{{ $bankId }}" {{ !$loop->first ? 'hidden' : '' }}>
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-chart-line me-1"></i> {{ $data['name'] }} — Balance Over Time
-                </div>
-                <div class="card-body">
-                    <canvas id="balance-chart-{{ $bankId }}" height="90"></canvas>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
                     <i class="fas fa-chart-bar me-1"></i> {{ $data['name'] }} — Yearly Increase
                 </div>
                 <div class="card-body">
@@ -79,6 +70,15 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-1"></i> {{ $data['name'] }} — Balance Over Time
+                </div>
+                <div class="card-body">
+                    <canvas id="balance-chart-{{ $bankId }}" height="90"></canvas>
                 </div>
             </div>
             </div>
