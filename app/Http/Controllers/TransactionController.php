@@ -1100,6 +1100,8 @@ class TransactionController extends Controller
         $transactions = [];
 
         try {
+            // ASNB PDFs can exceed the default production PHP memory limit while being decoded.
+            ini_set('memory_limit', '512M');
             $parser = new \Smalot\PdfParser\Parser();
             $pdf = $parser->parseFile($pdfPath);
             $text = $pdf->getText();
