@@ -133,6 +133,19 @@ document.addEventListener('DOMContentLoaded', function () {
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            onClick: (event, elements) => {
+                                if (!elements.length) return;
+
+                                const month = elements[0].index + 1;
+                                const url = new URL('{{ route('transactions.index') }}', window.location.origin);
+                                url.searchParams.set('spending_type_id', type.id);
+                                url.searchParams.set('month', month);
+                                url.searchParams.set('year', year);
+                                window.open(url.toString(), '_blank', 'noopener');
+                            },
+                            onHover: (event, elements) => {
+                                event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                            },
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {

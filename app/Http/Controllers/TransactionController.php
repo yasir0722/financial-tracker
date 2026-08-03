@@ -34,6 +34,17 @@ class TransactionController extends Controller
             $query->where('transaction_date', '<=', $request->date_to);
         }
 
+        if ($request->filled('year') && is_numeric($request->year)) {
+            $query->whereYear('transaction_date', (int) $request->year);
+        }
+
+        if ($request->filled('month') && is_numeric($request->month)) {
+            $month = (int) $request->month;
+            if ($month >= 1 && $month <= 12) {
+                $query->whereMonth('transaction_date', $month);
+            }
+        }
+
         // Filter by spending type
         if ($request->filled('spending_type_id')) {
             $query->where('spending_type_id', $request->spending_type_id);

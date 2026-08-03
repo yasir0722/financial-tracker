@@ -577,9 +577,6 @@
             <a class="nav-link {{ request()->routeIs('transactions.*') ? 'active' : '' }}" href="{{ route('transactions.index') }}">
                 <i class="fas fa-arrow-right-arrow-left"></i> Transactions
             </a>
-            <a class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : '' }}" href="{{ route('analytics.index') }}">
-                <i class="fas fa-chart-bar"></i> Analytics
-            </a>
             <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
                 <i class="fas fa-chart-line"></i> Monitor
             </a>
