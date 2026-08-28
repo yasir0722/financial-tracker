@@ -18,7 +18,11 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with('bank')->where('user_id', auth()->id());
+        $query = Transaction::with(['bank', 'carExpense'])->where('user_id', auth()->id());
+
+        if ($request->boolean('car_expense')) {
+            $query->whereHas('carExpense');
+        }
 
         // Filter by bank
         if ($request->filled('bank_id')) {
@@ -168,6 +172,13 @@ class TransactionController extends Controller
         $banks = Bank::all();
         $spendingTypes = \App\Models\RefSpendingType::getOptions();
         return view('transactions.create', compact('banks', 'spendingTypes'));
+    }
+
+    public function show(Transaction $transaction)
+    {
+        abort_unless($transaction->user_id === auth()->id(), 403);
+        $transaction->load(['bank', 'spendingType', 'carExpense.items', 'carExpense.vehicle']);
+        return view('transactions.show', compact('transaction'));
     }
 
     /**

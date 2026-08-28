@@ -52,4 +52,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Transaction::class);
     }
+
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class);
+    }
+
+    public function carExpenses()
+    {
+        return $this->hasManyThrough(CarExpense::class, Transaction::class);
+    }
 }

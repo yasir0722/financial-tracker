@@ -586,6 +586,17 @@
                 <i class="fas fa-piggy-bank"></i> Investments
             </a>
 
+            <div class="sidebar-section-label">Car</div>
+            <a class="nav-link {{ request()->routeIs('car-expenses.index') ? 'active' : '' }}" href="{{ route('car-expenses.index') }}">
+                <i class="fas fa-chart-pie"></i> Car Dashboard
+            </a>
+            <a class="nav-link {{ request()->routeIs('car-expenses.list') ? 'active' : '' }}" href="{{ route('car-expenses.list') }}">
+                <i class="fas fa-list"></i> Maintenance List
+            </a>
+            <a class="nav-link {{ request()->routeIs('vehicles.*') ? 'active' : '' }}" href="{{ route('vehicles.index') }}">
+                <i class="fas fa-car-side"></i> Vehicles
+            </a>
+
             <div class="sidebar-section-label">Settings</div>
             <a class="nav-link {{ request()->routeIs('spending-types.*') ? 'active' : '' }}" href="{{ route('spending-types.index') }}">
                 <i class="fas fa-tags"></i> Spending Types

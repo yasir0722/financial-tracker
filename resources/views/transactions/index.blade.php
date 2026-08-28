@@ -237,6 +237,7 @@
                                             @endif
                                         </a>
                                     </th>
+                                    <th class="text-center">Car</th>
                                     <th class="text-right">
                                         <a href="{{ route('transactions.index', array_merge(request()->all(), ['sort' => 'debit', 'direction' => request('sort') == 'debit' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
                                            class="text-decoration-none text-dark">
@@ -305,6 +306,13 @@
                                         @endif
                                     </td>
                                     <td>{{ $transaction->transaction_detail }}</td>
+                                    <td class="text-center">
+                                        @if($transaction->carExpense)
+                                            <a href="{{ route('car-expenses.show', $transaction->carExpense) }}" class="text-warning" title="View car maintenance record">
+                                                <i class="fas fa-car"></i>
+                                            </a>
+                                        @endif
+                                    </td>
                                     <td class="text-right text-danger">
                                         @if($transaction->debit > 0)
                                             ${{ number_format($transaction->debit, 2) }}
@@ -347,6 +355,9 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
+                                            <a href="{{ route('transactions.show', $transaction) }}" class="btn btn-sm btn-outline-secondary" title="View details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             <a href="{{ route('transactions.edit', $transaction) }}" 
                                                class="btn btn-sm btn-outline-primary" title="Edit">
                                                 <i class="fas fa-edit"></i>
@@ -365,7 +376,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="11" class="text-center py-4">
+                                    <td colspan="13" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-3x mb-3"></i>
                                             <h5>No transactions found</h5>

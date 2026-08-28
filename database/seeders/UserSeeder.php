@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
     {
         // Create admin user if it doesn't exist
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'admin@fintrack.test'],
             [
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),

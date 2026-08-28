@@ -57,6 +57,11 @@ class Transaction extends Model
         return $this->belongsTo(RefSpendingType::class, 'spending_type_id');
     }
 
+    public function carExpense()
+    {
+        return $this->hasOne(CarExpense::class);
+    }
+
     /**
      * Get the transaction amount (credit - debit)
      */

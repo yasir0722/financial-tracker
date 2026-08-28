@@ -7,6 +7,8 @@ use App\Http\Controllers\SpendingTypeController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\InvestmentController;
+use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\CarExpenseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +41,12 @@ Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
 
     // Investment routes
     Route::get('/investments', [InvestmentController::class, 'index'])->name('investments.index');
+
+    // Car maintenance routes
+    Route::resource('vehicles', VehicleController::class)->except(['show']);
+    Route::get('/car-expenses/list', [CarExpenseController::class, 'list'])->name('car-expenses.list');
+    Route::resource('car-expenses', CarExpenseController::class);
+    Route::get('/car-expenses-export', [CarExpenseController::class, 'export'])->name('car-expenses.export');
 
     // Transaction routes
     Route::get('/transactions/find-duplicates', [TransactionController::class, 'findDuplicates'])->name('transactions.find-duplicates');
