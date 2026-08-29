@@ -33,7 +33,7 @@ class MobileController extends Controller
         $itemNames = CarExpense::whereHas('transaction', fn ($query) => $query->where('user_id', $userId))
             ->with('items')->get()->flatMap->items->pluck('item_name')->filter()->unique()->sort()->values();
 
-        $months = collect(range(5, 0))->map(function (int $monthsAgo) use ($userId) {
+        $months = collect(range(0, 5))->map(function (int $monthsAgo) use ($userId) {
             $date = now()->startOfMonth()->subMonths($monthsAgo);
             $transactions = Transaction::where('user_id', $userId)->whereBetween('transaction_date', [$date->copy()->startOfMonth(), $date->copy()->endOfMonth()])->get();
             $typeTotals = $transactions->where('debit', '>', 0)->groupBy('spending_type_id')->map->sum('debit')->sortDesc();
