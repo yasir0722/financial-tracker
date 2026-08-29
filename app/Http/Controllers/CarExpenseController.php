@@ -72,6 +72,7 @@ class CarExpenseController extends Controller
     {
         $this->ensureTransactionOwner($request->integer('transaction_id'));
         $this->ensureVehicleOwner($request->integer('vehicle_id'));
+        if (!$this->expenseTotalMatchesTransaction($request)) return back()->withErrors(['items' => 'Grand Total must match the selected transaction amount.'])->withInput();
         if (CarExpense::where('transaction_id', $request->transaction_id)->exists()) return back()->withErrors(['transaction_id' => 'This transaction already has a car expense.'])->withInput();
         $expense = DB::transaction(fn () => $this->saveExpense(new CarExpense(), $request));
         return redirect()->route('car-expenses.show', $expense)->with('success', 'Car maintenance record created.');
@@ -98,6 +99,7 @@ class CarExpenseController extends Controller
         $this->authorize('update', $carExpense);
         $this->ensureTransactionOwner($request->integer('transaction_id'));
         $this->ensureVehicleOwner($request->integer('vehicle_id'));
+        if (!$this->expenseTotalMatchesTransaction($request)) return back()->withErrors(['items' => 'Grand Total must match the selected transaction amount.'])->withInput();
         DB::transaction(fn () => $this->saveExpense($carExpense, $request));
         return redirect()->route('car-expenses.show', $carExpense)->with('success', 'Car maintenance record updated.');
     }
@@ -146,6 +148,15 @@ class CarExpenseController extends Controller
     private function ensureVehicleOwner(int $vehicleId): void
     {
         abort_unless(Vehicle::whereKey($vehicleId)->where('user_id', auth()->id())->exists(), 403);
+    }
+
+    private function expenseTotalMatchesTransaction(CarExpenseRequest $request): bool
+    {
+        $transaction = Transaction::where('user_id', auth()->id())->findOrFail($request->integer('transaction_id'));
+        $transactionAmount = (float) ($transaction->debit ?: $transaction->credit);
+        $expenseTotal = collect($request->validated('items'))->sum(fn ($item) => ((float) $item['quantity'] * (float) $item['unit_price']) + (float) ($item['labour_cost'] ?? 0));
+
+        return abs(round($expenseTotal, 2) - round($transactionAmount, 2)) < 0.001;
     }
 
     private function workshopsForUser()
