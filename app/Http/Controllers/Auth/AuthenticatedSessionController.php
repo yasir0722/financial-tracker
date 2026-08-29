@@ -32,7 +32,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(RouteServiceProvider::homeFor($request));
+        $home = RouteServiceProvider::homeFor($request);
+
+        return $home === '/mobile'
+            ? redirect($home)
+            : redirect()->intended($home);
     }
 
     /**
