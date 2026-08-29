@@ -42,7 +42,17 @@
 @else
     <div class="d-flex justify-content-between align-items-center mb-3"><h1 class="h4 mb-0">Maintenance</h1><a class="btn btn-sm btn-primary" href="{{ route('car-expenses.create') }}"><i class="fas fa-plus"></i></a></div>
     <form method="GET" class="mobile-panel p-2 mb-3"><input type="hidden" name="tab" value="car"><div class="input-group"><select name="item_name" class="form-select"><option value="">All Items</option>@foreach($itemNames as $itemName)<option value="{{ $itemName }}" {{ $itemSearch === $itemName ? 'selected' : '' }}>{{ $itemName }}</option>@endforeach</select><button class="btn btn-primary"><i class="fas fa-search"></i></button></div></form>
-    <div class="mobile-panel p-2"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Date</th><th>Item</th><th>Vehicle / Workshop</th><th>Price</th><th></th></tr></thead><tbody>@forelse($expenses as $expense)@foreach($expense->items as $item)@if(!$itemSearch || $item->item_name === $itemSearch)<tr><td class="text-nowrap">{{ $expense->service_date->format('d/m/Y') }}</td><td>{{ $item->item_name }}</td><td>{{ $expense->vehicle?->name ?: '-' }}<br><span class="muted">{{ $expense->workshop ?: '-' }}</span></td><td class="text-nowrap">RM {{ number_format((float) $item->total_price, 2) }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ route('car-expenses.show', $expense) }}" title="View"><i class="fas fa-eye"></i></a></td></tr>@endif@endforeach @empty<tr><td colspan="5" class="text-center muted py-4">No maintenance records found.</td></tr>@endforelse</tbody></table></div></div>{{ $expenses->links() }}
+    <div class="mobile-panel p-2"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Date</th><th>Item</th><th>Vehicle / Workshop</th><th>Price</th><th></th></tr></thead><tbody>
+    @forelse($expenses as $expense)
+        @foreach($expense->items as $item)
+            @if(!$itemSearch || $item->item_name === $itemSearch)
+                <tr><td class="text-nowrap">{{ $expense->service_date->format('d/m/Y') }}</td><td>{{ $item->item_name }}</td><td>{{ $expense->vehicle?->name ?: '-' }}<br><span class="muted">{{ $expense->workshop ?: '-' }}</span></td><td class="text-nowrap">RM {{ number_format((float) $item->total_price, 2) }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ route('car-expenses.show', $expense) }}" title="View"><i class="fas fa-eye"></i></a></td></tr>
+            @endif
+        @endforeach
+    @empty
+        <tr><td colspan="5" class="text-center muted py-4">No maintenance records found.</td></tr>
+    @endforelse
+    </tbody></table></div></div>{{ $expenses->links() }}
 @endif
 </main>
 <nav class="bottom-tabs"><a class="{{ $tab === 'transactions' ? 'active' : '' }}" href="{{ route('mobile.index', ['tab' => 'transactions']) }}"><i class="fas fa-arrow-right-arrow-left"></i>Transactions</a><a class="{{ $tab === 'monitor' ? 'active' : '' }}" href="{{ route('mobile.index', ['tab' => 'monitor']) }}"><i class="fas fa-chart-column"></i>Monitor</a><a class="{{ $tab === 'car' ? 'active' : '' }}" href="{{ route('mobile.index', ['tab' => 'car']) }}"><i class="fas fa-car"></i>Car</a></nav>
