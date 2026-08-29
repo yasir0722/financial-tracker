@@ -8,7 +8,7 @@
 <div class="card shadow-sm mb-4 d-none" id="csv-preview"><div class="card-header d-flex justify-content-between align-items-center"><strong>Check CSV before importing</strong><span id="csv-preview-count" class="small text-muted"></span></div><div class="card-body table-responsive"><table class="table table-sm" id="csv-preview-table"><thead></thead><tbody></tbody></table><div class="d-flex gap-2"><button type="button" class="btn btn-primary" id="use-csv-items">Use these items</button><button type="button" class="btn btn-outline-secondary" id="cancel-csv-items">Cancel</button></div></div></div>
 <form id="maintenance-form" method="POST" action="{{ $expense->exists ? route('car-expenses.update', $expense) : route('car-expenses.store') }}">@csrf @if($expense->exists) @method('PUT') @endif
 @php
-	$selectedVehicleId = old('vehicle_id', $expense->vehicle_id ?: $vehicles->firstWhere('is_default', true)?->id);
+	$selectedVehicleId = old('vehicle_id', $expense->vehicle_id ?: $vehicles->first()?->id);
 	$notesData = $expense->notes_data;
 	$selectedWorkshop = old('workshop_existing', $expense->workshop);
 @endphp

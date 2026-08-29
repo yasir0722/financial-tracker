@@ -19,6 +19,13 @@ class RouteServiceProvider extends ServiceProvider
      */
     public const HOME = '/dashboard';
 
+    public static function homeFor(Request $request): string
+    {
+        return preg_match('/Android|iPhone|iPad|iPod|Mobile/i', $request->userAgent() ?? '')
+            ? '/mobile'
+            : self::HOME;
+    }
+
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
      */

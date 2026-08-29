@@ -51,6 +51,6 @@ class PasswordController extends Controller
             'must_change_password' => false, // Reset the flag
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Password changed successfully! You can now use the application.');
+        return redirect(RouteServiceProvider::homeFor($request))->with('success', 'Password changed successfully! You can now use the application.');
     }
 }
