@@ -9,6 +9,7 @@ use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\CarExpenseController;
+use App\Http\Controllers\MobileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,6 +29,7 @@ Route::get('/', function () {
 
 // Protected routes (require authentication)
 Route::middleware(['auth', 'verified', 'password.change'])->group(function () {
+    Route::get('/mobile', [MobileController::class, 'index'])->name('mobile.index');
     // Dashboard route
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/spending-by-type', [DashboardController::class, 'spendingByTypeYearly'])->name('dashboard.spending-by-type');
