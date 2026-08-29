@@ -153,6 +153,23 @@
     </div>
 </div>
 
+@if(preg_match('/Android|iPhone|iPad|iPod|Mobile/i', request()->userAgent() ?? ''))
+<nav class="mobile-bottom-tabs">
+    <a href="{{ route('mobile.index', ['tab' => 'transactions']) }}"><i class="fas fa-right-left"></i><span>Transactions</span></a>
+    <a href="{{ route('mobile.index', ['tab' => 'monitor']) }}"><i class="fas fa-chart-column"></i><span>Monitor</span></a>
+    <a href="{{ route('mobile.index', ['tab' => 'car']) }}"><i class="fas fa-car"></i><span>Car</span></a>
+</nav>
+@push('styles')
+<style>
+    body { padding-bottom: 78px; }
+    .mobile-bottom-tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: #18243a; border-top: 1px solid rgba(255,255,255,.15); }
+    .mobile-bottom-tabs a { color: #9caac0; text-align: center; text-decoration: none; font-size: .72rem; padding: 4px 2px; }
+    .mobile-bottom-tabs a:hover { color: #fff; }
+    .mobile-bottom-tabs i { display: block; font-size: 1.05rem; margin-bottom: 3px; }
+</style>
+@endpush
+@endif
+
 @push('scripts')
 <script>
     // Monthly Income vs Expense Chart
